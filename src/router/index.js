@@ -154,28 +154,28 @@ export const allowRouters = [
     children: [
       {
         path: 'recharge',
-        component: () => import('@/pages/finance/RechargeList'),
+        component: () => import('@/pages/hongbao/finance/RechargeList'),
         meta: {
           title: '充值管理'
         }
       },
       {
         path: 'withdraw',
-        component: () => import('@/pages/finance/WithdrawList'),
+        component: () => import('@/pages/hongbao/finance/WithdrawList'),
         meta: {
           title: '提现管理'
         }
       },
       {
-        path: 'money-log',
-        component: () => import('@/pages/finance/MoneyLog'),
+        path: 'moneylog',
+        component: () => import('@/pages/hongbao/finance/MoneyLog'),
         meta: {
           title: '资金流水'
         }
       },
       {
-        path: 'deposit-accounts',
-        component: () => import('@/pages/finance/DepositAccounts'),
+        path: 'depositaccounts',
+        component: () => import('@/pages/hongbao/finance/DepositAccounts'),
         meta: {
           title: '收款账户'
         }
@@ -192,47 +192,28 @@ export const allowRouters = [
     },
     children: [
       {
-        path: 'groups',
-        component: () => import('@/pages/telegram/GroupList'),
+        path: 'redPacketList',
+        component: () => import('@/pages/hongbao/redpacket/RedPacketList'),
         meta: {
-          title: '群组管理'
+          title: '红包管理'
+        }
+      },
+      {
+        path: 'redPacketRecords',
+        component: () => import('@/pages/hongbao/redpacket/RecordList'),
+        meta: {
+          title: '领取记录'
         }
       },
       {
         path: 'advertisements',
-        component: () => import('@/pages/telegram/AdvertisementList'),
+        component: () => import('@/pages/hongbao/telegram/AdvertisementList'),
         meta: {
           title: '广告管理'
         }
       }
     ]
   },
-
-  // 5. 红包系统模块
-  {
-    path: '/redpacket',
-    component: Home,
-    meta: {
-      title: '红包系统'
-    },
-    children: [
-      {
-        path: 'list',
-        component: () => import('@/pages/redpacket/RedPacketList'),
-        meta: {
-          title: '红包管理'
-        }
-      },
-      {
-        path: 'records',
-        component: () => import('@/pages/redpacket/RecordList'),
-        meta: {
-          title: '领取记录'
-        }
-      }
-    ]
-  },
-
 
 ]
 
