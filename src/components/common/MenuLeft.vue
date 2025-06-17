@@ -32,7 +32,6 @@
   import setting from '@/config/setting'
   import Submenu from './Submenu.vue';
   import { mapState } from 'vuex'
-  import { getMenuListApi } from "@/api/menu"
   export default {
     name: "MenuLeft",
     inject: ['reload'],

@@ -59,7 +59,7 @@
 
 <script>
   import setting from '@/config/setting'
-  import {  loginApi,AgentloginApi,AgentloginNotice  } from '@/api/loginApi'
+  import {  loginApi  } from '@/api/loginApi'
   import {  setToken,getToken} from "@/utils/auth"
   import {  baseUrl } from "@/utils/config"
 
@@ -75,8 +75,6 @@
         loading: false,
         btnText: '登录3',
         captchaUrl : baseUrl +'/login/captcha',
-        // 1后台管理员 2代理管理员
-        agentType: 1,
         //维护状态 0 正常  1维护
         maintainSate: '-1',
         //内容
@@ -84,9 +82,6 @@
       }
     },
     created(){
-      this.getAgentloginNotice()
-
-    //   this.enterSearch()
     },
     mounted() {
       let path = '/dashboard/console'
@@ -117,25 +112,11 @@
           this.$message.error('请输入密码')
           return
         }
-        let type = this.agentType;// 1后台管理员 2代理管理员
-        // if(!type){
-        //    let type =1;//后台管理员
-        // }
 
-        // if(!type) {
-        //   this.$message.error('请选择登陆类型')
-        //   return
-        // }
+        localStorage.setItem('admin_type',1);// 1后台管理员 2代理管理员
 
-        localStorage.setItem('admin_type',type);
-
-        if(type !=1){
-          this.Agentlogin()
-          return;
-        }else{
-          this.adminligon()
-          return;
-        }
+        this.adminligon()
+        return;
       },
        //回车搜索
         enterSearch(){
@@ -170,52 +151,9 @@
           }
         })
       },
-      //获取代理的维护信息
-      getAgentloginNotice(){
-        if(this.agentType == 1) {
-          return
-        }
-        AgentloginNotice({name : 'web_maintain'}).then(res => {
-          if(!res.data.content){
-            return
-          }
-          this.content = res.data
-          this.contentList = res.data.content.split('||')
-          this.maintainSate = res.data.value
-        }).catch(err => {
-          console.log(err)
-        })
-      },
       //跳转到客服
       toService() {
         this.$router.push({ path: '/service' })
-      },
-      Agentlogin(){
-        let {account, password, code, captcha,type} = this
-        AgentloginApi({
-          user_name: account,
-          pwd: password,
-          captcha: captcha,
-          captchaId: captcha.captchaId,
-          admin_type:type
-        }).then(res => {
-          if(res.code === 1) {
-            this.loading = true
-            this.btnText = '登录中...'
-            this.$store.dispatch('user/setUserInfo', res.data)
-            this.$store.dispatch('user/setLoginStatus', true)
-            setToken(res.data.token)
-            localStorage.setItem('user_name',account)
-            setTimeout(() => {
-              // this.$router.push('/platform/agent')
-              this.$router.push('/dashboard/console')
-            }, 1000)
-          }
-
-          if(res.code === 7) {
-            this.getCaptcha()
-          }
-        })
       },
       tokenlogin()
       {

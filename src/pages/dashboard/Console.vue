@@ -1,259 +1,154 @@
 <template>
-  <div class="task console">
-    <console-card />
+  <div class="console-container">
+    <div class="console-header">
+      <h1>控制台</h1>
+      <p>欢迎使用管理后台系统</p>
+    </div>
+
+    <div class="console-content">
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <h3>总用户数</h3>
+              <p class="stat-number">1,234</p>
+            </div>
+          </div>
+        </el-col>
+
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+              <h3>今日收入</h3>
+              <p class="stat-number">¥12,345</p>
+            </div>
+          </div>
+        </el-col>
+
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+              <h3>活跃用户</h3>
+              <p class="stat-number">567</p>
+            </div>
+          </div>
+        </el-col>
+
+        <el-col :span="6">
+          <div class="stat-card">
+            <div class="stat-icon">🔔</div>
+            <div class="stat-info">
+              <h3>系统消息</h3>
+              <p class="stat-number">8</p>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+
+      <div class="welcome-message">
+        <h2>🎉 系统运行正常</h2>
+        <p>所有功能模块已就绪，请从左侧菜单开始使用各项功能。</p>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-  import ConsoleCard from "@/components/dashboard/ConsoleCard"
-  import {
-    getConfigInfoApi,getConfigEditApi,getClearTokenApi,getMysqlBackupsApi,getMysqlRecordsApi
-  } from '@/api/CountApi'
-  export default {
-    data () {
-      return {
-        primary:'primary',
-        weihu: '开启平台维护',
-        web_maintain:[],
-      }
-    },
-    components: {
-      ConsoleCard,
-    },
-    mounted() {
-      //获取配置
-      this.getConfigInfo();
-    },
-    methods: {
-      getConfigInfo(){
-        getConfigInfoApi({name:'web_maintain'}).then(res => {
-          if (res.code == 1) {
-            this.web_maintain=res.data
-            if (res.data.value == 1){
-              this.weihu = '平台维护中'
-              this.primary = 'warning'
-            }else{
-              this.weihu = '开启平台维护'
-              this.primary = 'primary'
-            }
-          }
-        })
-      },
-      order() {
-        this.$confirm('确定备份吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getMysqlRecordsApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '备份成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '备份失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消备份'
-          });
-        });
-      },
-      restart() {
-        this.$confirm('确定切换平台状态吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          if (this.web_maintain.value == 1){
-            this.web_maintain.value=0;
-          }else {
-            this.web_maintain.value = 1;
-          }
-
-          getConfigEditApi(this.web_maintain).then(res => {
-            if (res.code == 1) {
-              this.getConfigInfo();
-              this.$message({
-                type: 'success',
-                message: '修改成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '修改失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '请检查web_maintain配置'
-          });
-        });
-      },
-      stop() {
-        this.$confirm('确定清理吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getClearTokenApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '清理成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '清理失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消清理'
-          });
-        });
-      },
-
-      luzhu() {
-        this.$confirm('确定备份吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getMysqlBackupsApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '备份成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '备份失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消备份'
-          });
-        });
-      }
-
+export default {
+  name: 'Console',
+  data() {
+    return {
+      // 这里可以添加一些数据
     }
+  },
+  mounted() {
+    console.log('控制台页面已加载')
+  },
+  methods: {
+    // 这里可以添加一些方法
   }
+}
 </script>
 
 <style lang="scss" scoped>
-  .console {
-    height: 100%;
+.console-container {
+  padding: 20px;
 
-    &::-webkit-scrollbar {
-      width: 0px !important;
+  .console-header {
+    text-align: center;
+    margin-bottom: 30px;
+
+    h1 {
+      font-size: 32px;
+      color: #303133;
+      margin-bottom: 10px;
     }
 
-    >>>.head {
+    p {
+      font-size: 16px;
+      color: #909399;
+    }
+  }
+
+  .console-content {
+    .stat-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding-right: 20px;
-      padding: 10px 0;
-      border-bottom: 1px solid #F0F0F0;
-      position: relative;
-      z-index: 999;
+      margin-bottom: 20px;
+      transition: transform 0.3s ease;
 
-      .line-title {
-        padding: 0 13px;
-        display: flex;
-        align-items: center;
-
-        i {
-          display: inline-block;
-          width: 24px;
-          height: 24px;
-          line-height: 24px;
-          text-align: center;
-          border-radius: 50%;
-          color: #1890FF;
-          background-color: rgb(230, 247, 255);
-          font-size: 15px;
-        }
-
-        span {
-          color: #555;
-          font-size: 15px;
-          margin-left: 10px;
-        }
+      &:hover {
+        transform: translateY(-5px);
       }
-    }
 
-    .row {
-      display: flex;
-      margin-top: 15px;
-      background: transparent !important;
-
-      >div {
+      .stat-icon {
+        font-size: 40px;
         margin-right: 15px;
-        overflow: hidden;
-        background: #fff;
-        border-radius: 3px;
-        transition: box-shadow .3s;
+      }
 
-        &:last-of-type {
-          margin-right: 0 !important;
+      .stat-info {
+        flex: 1;
+
+        h3 {
+          font-size: 14px;
+          color: #909399;
+          margin: 0 0 8px 0;
+        }
+
+        .stat-number {
+          font-size: 24px;
+          font-weight: bold;
+          color: #303133;
+          margin: 0;
         }
       }
     }
 
-    .row1,
-    .row2 {
-      height: 380px;
-    }
-  }
+    .welcome-message {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      margin-top: 30px;
 
-  @media only screen and (max-width: $device-notebook) {
-    .console {
-      .row1 {
-        height: 350px;
+      h2 {
+        font-size: 28px;
+        margin-bottom: 15px;
       }
 
-      .row2 {
-        height: 300px;
-      }
-    }
-  }
-
-  @media only screen and (max-width: $device-ipad) {
-    .console {
-
-      .row {
-        display: block;
-        height: auto !important;
-
-        >div {
-          height: 370px;
-        }
-      }
-
-      .row1 {
-        margin-top: 0;
+      p {
+        font-size: 16px;
+        opacity: 0.9;
       }
     }
   }
+}
 </style>
