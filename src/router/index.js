@@ -74,6 +74,57 @@ export const allowRouters = [
     ]
   },
 
+  {
+    path: '/systemset',
+    component: Home,
+    meta: {
+      title: '系统设置'
+    },
+    children: [
+      {
+        path: 'menulist',
+        component: () => import('@/pages/systemset/menulist'),
+        meta: {
+          title: '菜单列表'
+        }
+      },
+      {
+        path: 'role',
+        component: () => import('@/pages/systemset/role'),
+        meta: {
+          title: '角色权限管理'
+        }
+      },
+      {
+        path: 'controllerlist',
+        component: () => import('@/pages/systemset/controllerlist'),
+        meta: {
+          title: '控制器管理'
+        }
+      },
+      {
+        path: 'log',
+        component: () => import('@/pages/systemset/Log'),
+        meta: {
+          title: '操作日志'
+        }
+      },
+      {
+        path: 'roleadminlist',
+        component: () => import('@/pages/systemset/roleadminlist'),
+        meta: {
+          title: '角色列表'
+        }
+      },
+      {
+        path: 'adminlist',
+        component: () => import('@/pages/systemset/adminList'),
+        meta: {
+          title: '管理员列表'
+        }
+      },
+    ]
+  },
   // 2. 用户管理模块
   {
     path: '/user',
@@ -83,21 +134,15 @@ export const allowRouters = [
     },
     children: [
       {
-        path: 'list',
-        component: () => import('@/pages/user/UserList'),
+        path: 'userlist',
+        component: () => import('@/pages/user/UserLists'),
         meta: {
           title: '用户列表'
-        }
-      },
-      {
-        path: 'invitation',
-        component: () => import('@/pages/user/InvitationList'),
-        meta: {
-          title: '邀请管理'
         }
       }
     ]
   },
+
 
   // 3. 财务管理模块
   {
@@ -129,24 +174,10 @@ export const allowRouters = [
         }
       },
       {
-        path: 'deposit-methods',
-        component: () => import('@/pages/finance/DepositMethods'),
-        meta: {
-          title: '充值方式'
-        }
-      },
-      {
         path: 'deposit-accounts',
         component: () => import('@/pages/finance/DepositAccounts'),
         meta: {
           title: '收款账户'
-        }
-      },
-      {
-        path: 'invitation-rewards',
-        component: () => import('@/pages/finance/InvitationRewards'),
-        meta: {
-          title: '邀请奖励'
         }
       }
     ]
@@ -165,20 +196,6 @@ export const allowRouters = [
         component: () => import('@/pages/telegram/GroupList'),
         meta: {
           title: '群组管理'
-        }
-      },
-      {
-        path: 'messages',
-        component: () => import('@/pages/telegram/MessageList'),
-        meta: {
-          title: '消息记录'
-        }
-      },
-      {
-        path: 'message-logs',
-        component: () => import('@/pages/telegram/MessageLogs'),
-        meta: {
-          title: '消息日志'
         }
       },
       {
@@ -212,88 +229,11 @@ export const allowRouters = [
         meta: {
           title: '领取记录'
         }
-      },
-      {
-        path: 'statistics',
-        component: () => import('@/pages/redpacket/Statistics'),
-        meta: {
-          title: '红包统计'
-        }
-      },
-      {
-        path: 'send',
-        component: () => import('@/pages/redpacket/SendRedPacket'),
-        meta: {
-          title: '发送红包'
-        }
       }
     ]
   },
 
 
-  // 7. 数据统计模块
-  {
-    path: '/statistics',
-    component: Home,
-    meta: {
-      title: '数据统计'
-    },
-    children: [
-      {
-        path: 'users',
-        component: () => import('@/pages/statistics/UserStatistics'),
-        meta: {
-          title: '用户统计'
-        }
-      },
-      {
-        path: 'finance',
-        component: () => import('@/pages/statistics/FinanceStatistics'),
-        meta: {
-          title: '财务统计'
-        }
-      },
-      {
-        path: 'telegram',
-        component: () => import('@/pages/statistics/TelegramStatistics'),
-        meta: {
-          title: 'TG群组统计'
-        }
-      },
-      {
-        path: 'redpacket',
-        component: () => import('@/pages/statistics/RedPacketStatistics'),
-        meta: {
-          title: '红包统计'
-        }
-      },
-      {
-        path: 'promotion',
-        component: () => import('@/pages/statistics/PromotionStatistics'),
-        meta: {
-          title: '推广统计'
-        }
-      }
-    ]
-  },
-
-  // 8. 系统设置模块
-  {
-    path: '/system',
-    component: Home,
-    meta: {
-      title: '系统设置'
-    },
-    children: [
-      {
-        path: 'admin',
-        component: () => import('@/pages/system/AdminList'),
-        meta: {
-          title: '管理员管理'
-        }
-      }
-    ]
-  }
 ]
 
 /**

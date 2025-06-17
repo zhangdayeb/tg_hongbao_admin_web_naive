@@ -1,11 +1,10 @@
 <template>
   <div class="menu-left" v-if="showMenuMobile">
     <div class="header" :style="{background: theme.menuLeftBc}" @click="goPage('/dashboard/console')">
-      <!-- <svg class="svg-icon" aria-hidden="true">
+      <svg class="svg-icon" aria-hidden="true">
         <use xlink:href="#iconzhaopian-copy"></use>
-      </svg> -->
-      <img class="menu-left-log"  src="~@/assets/img/login/yb12.png" alt="" srcset="">
-      <p :style="{color: theme.textColor, width: collapse ? '0' : '120px'}">用户({{user_name}})</p>
+      </svg>
+      <p :style="{color: theme.textColor, width: collapse ? '0' : '190px'}">{{systemName}}</p>
     </div>
 
     <el-menu class="el-menu" :class="'el-menu-'+ theme.theme"
@@ -32,6 +31,7 @@
   import setting from '@/config/setting'
   import Submenu from './Submenu.vue';
   import { mapState } from 'vuex'
+  import { getMenuListApi } from "@/api/menu"
   export default {
     name: "MenuLeft",
     inject: ['reload'],
@@ -73,7 +73,6 @@
     },
     data() {
       return {
-        user_name:'',
         status: '',
         systemName: setting.systemName, // 系统名称
         menuList: [],                   // 菜单数据
@@ -90,8 +89,6 @@
       }
     },
     mounted() {
-      localStorage
-      this.user_name = localStorage.getItem('user_name')
       this.getMenuList()
       this.initUserSetting()
       this.listenerWindowResize()
@@ -99,198 +96,16 @@
     methods: {
       // 获取菜单列表|权限列表
       getMenuList() {
-        // 根据数据库表结构设计的完整菜单配置
-        const fixedMenuList = [
-          {
-            id: 1,
-            title: '控制台',
-            path: '/dashboard',
-            icon: 'el-icon-s-home',
-            children: [
-              {
-                id: 11,
-                title: '控制面板',
-                path: '/dashboard/console'
-              }
-            ]
-          },
-          {
-            id: 2,
-            title: '用户管理',
-            path: '/user',
-            icon: 'el-icon-user',
-            children: [
-              {
-                id: 21,
-                title: '用户列表',
-                path: '/user/list',
-                desc: '管理ntp_common_user表数据'
-              },
-              {
-                id: 25,
-                title: '邀请管理',
-                path: '/user/invitation',
-                desc: '管理ntp_user_invitations表'
-              }
-            ]
-          },
-          {
-            id: 3,
-            title: '财务管理',
-            path: '/finance',
-            icon: 'el-icon-money',
-            children: [
-              {
-                id: 31,
-                title: '充值管理',
-                path: '/finance/recharge',
-                desc: '管理ntp_common_pay_recharge表'
-              },
-              {
-                id: 32,
-                title: '提现管理',
-                path: '/finance/withdraw',
-                desc: '管理ntp_common_pay_withdraw表'
-              },
-              {
-                id: 33,
-                title: '资金流水',
-                path: '/finance/money-log',
-                desc: '管理ntp_common_pay_money_log表'
-              },
-              {
-                id: 34,
-                title: '充值方式',
-                path: '/finance/deposit-methods',
-                desc: '管理ntp_dianji_deposit_methods表'
-              },
-              {
-                id: 35,
-                title: '收款账户',
-                path: '/finance/deposit-accounts',
-                desc: '管理ntp_dianji_deposit_accounts表'
-              },
-              {
-                id: 36,
-                title: '邀请奖励',
-                path: '/finance/invitation-rewards',
-                desc: '管理ntp_invitation_rewards表'
-              }
-            ]
-          },
-          {
-            id: 4,
-            title: 'Telegram管理',
-            path: '/telegram',
-            icon: 'el-icon-chat-line-round',
-            children: [
-              {
-                id: 41,
-                title: '群组管理',
-                path: '/telegram/groups',
-                desc: '管理ntp_tg_crowd_list表'
-              },
-              {
-                id: 42,
-                title: '消息记录',
-                path: '/telegram/messages',
-                desc: '管理ntp_tg_messages表'
-              },
-              {
-                id: 43,
-                title: '消息日志',
-                path: '/telegram/message-logs',
-                desc: '管理ntp_tg_message_logs表'
-              },
-              {
-                id: 44,
-                title: '广告管理',
-                path: '/telegram/advertisements',
-                desc: '管理ntp_tg_advertisements表'
-              }
-            ]
-          },
-          {
-            id: 5,
-            title: '红包系统',
-            path: '/redpacket',
-            icon: 'el-icon-present',
-            children: [
-              {
-                id: 51,
-                title: '红包管理',
-                path: '/redpacket/list',
-                desc: '管理ntp_tg_red_packets表'
-              },
-              {
-                id: 52,
-                title: '领取记录',
-                path: '/redpacket/records',
-                desc: '管理ntp_tg_red_packet_records表'
-              },
-              {
-                id: 53,
-                title: '红包统计',
-                path: '/redpacket/statistics'
-              },
-              {
-                id: 54,
-                title: '发送红包',
-                path: '/redpacket/send'
-              }
-            ]
-          },
-          {
-            id: 7,
-            title: '数据统计',
-            path: '/statistics',
-            icon: 'el-icon-pie-chart',
-            children: [
-              {
-                id: 71,
-                title: '用户统计',
-                path: '/statistics/users'
-              },
-              {
-                id: 72,
-                title: '财务统计',
-                path: '/statistics/finance'
-              },
-              {
-                id: 73,
-                title: 'TG群组统计',
-                path: '/statistics/telegram'
-              },
-              {
-                id: 74,
-                title: '红包统计',
-                path: '/statistics/redpacket'
-              },
-              {
-                id: 75,
-                title: '推广统计',
-                path: '/statistics/promotion'
-              }
-            ]
-          },
-          {
-            id: 8,
-            title: '系统设置',
-            path: '/system',
-            icon: 'el-icon-setting',
-            children: [
-              {
-                id: 81,
-                title: '管理员管理',
-                path: '/system/admin',
-                desc: '管理ntp_common_admin表'
-              }
-            ]
-          }
-        ]
-
-        this.menuList = fixedMenuList
-
+        // this.menuList = this.$store.state.menu.menuList
+        getMenuListApi().then(res=>{
+          if(res.code == 1){
+            this.menuList = res.data.data
+            return;
+            }
+        this.$router.push('/login')
+        })
+        this.menuList = []
+        console.log(this.menuList)
       },
       // 获取主题
       getTheme(theme) {
@@ -456,12 +271,6 @@
     left: 0;
     box-shadow: 5px 5px 8px 0 rgba(29,35,41,.05);
 
-    .menu-left-log{
-      width: 32px;
-      height: 32px;
-      margin-left: 25px;
-    }
-
     .el-menu--collapse {
       >>> .el-submenu__title span,
       >>> .el-submenu__icon-arrow {
@@ -475,7 +284,6 @@
       box-sizing: border-box;
       cursor: pointer;
       display: flex;
-      align-items: center;
       overflow: hidden;
 
       .svg-icon {
