@@ -83,12 +83,12 @@
               每日：{{ scope.row.daily_times || '-' }}
             </div>
             <div v-else-if="scope.row.send_mode === 3">
-              间隔：{{ scope.row.interval_minutes }}分钟
+              间隔：{{ scope.row.interval_minutes || '-' }}分钟
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column label="状态" width="80" align="center">
+        <el-table-column label="状态" width="100" align="center">
           <template slot-scope="scope">
             <el-tag :type="getStatusType(scope.row.status)" size="small">
               {{ getStatusText(scope.row.status) }}
@@ -96,46 +96,39 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="成功率" width="100" align="center">
-          <template slot-scope="scope">
-            <span :style="{color: getSuccessRateColor(scope.row.success_count, scope.row.total_sent_count)}">
-              {{ getSuccessRate(scope.row.success_count, scope.row.total_sent_count) }}%
-            </span>
-          </template>
-        </el-table-column>
-
         <el-table-column label="发送统计" width="120" align="center">
           <template slot-scope="scope">
-            <div class="send-stats">
+            <div style="font-size: 12px;">
               <div>总计：{{ scope.row.total_sent_count || 0 }}</div>
-              <div>成功：{{ scope.row.success_count || 0 }}</div>
-              <div>失败：{{ scope.row.failed_count || 0 }}</div>
+              <div :style="{ color: getSuccessRateColor(scope.row.success_count, scope.row.total_sent_count) }">
+                成功率：{{ getSuccessRate(scope.row.success_count, scope.row.total_sent_count) }}%
+              </div>
             </div>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180" align="center" fixed="right">
+        <el-table-column label="创建时间" width="160" align="center">
           <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleViewDetail(scope.row)">
-              详情
-            </el-button>
-            <el-button type="text" size="small" @click="handleEdit(scope.row)">
-              编辑
-            </el-button>
-            <el-button type="text" size="small" @click="handleDelete(scope.row)" style="color: #f56c6c;">
-              删除
-            </el-button>
+            {{ scope.row.created_at }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="200" align="center" fixed="right">
+          <template slot-scope="scope">
+            <el-button size="mini" @click="handleViewDetail(scope.row)">详情</el-button>
+            <el-button size="mini" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button size="mini" type="danger" @click="handleDelete(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrapper">
+      <div style="margin-top: 20px; text-align: center;">
         <el-pagination
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
           :current-page="currentPage"
-          :page-sizes="[10, 20, 50, 100]"
+          :page-sizes="[20, 50, 100]"
           :page-size="pageSize"
           layout="total, sizes, prev, pager, next, jumper"
           :total="totalCount"
@@ -143,19 +136,20 @@
       </div>
     </el-card>
 
-    <!-- 编辑/新增广告弹窗 -->
+    <!-- 编辑/新增对话框 -->
     <el-dialog
       :title="editDialog.isEdit ? '编辑广告' : '新增广告'"
       :visible.sync="editDialog.visible"
       width="800px"
       :close-on-click-modal="false"
-      @close="handleDialogClose"
+      append-to-body
     >
       <el-form
-        :model="editForm"
-        :rules="editRules"
         ref="editForm"
+        :model="editForm"
+        :rules="currentRules"
         label-width="120px"
+        style="padding-right: 30px;"
       >
         <el-form-item label="广告标题" prop="title">
           <el-input
@@ -168,53 +162,45 @@
 
         <el-form-item label="广告内容" prop="content">
           <el-input
-            v-model="editForm.content"
             type="textarea"
-            :rows="6"
+            v-model="editForm.content"
             placeholder="请输入广告内容"
+            :rows="4"
             maxlength="1000"
             show-word-limit
           />
         </el-form-item>
 
         <el-form-item label="广告图片" prop="image_url">
-          <div class="image-upload-section">
+          <div class="image-upload-container">
+            <!-- 图片上传区域 -->
             <el-upload
-              class="image-uploader"
+              ref="imageUpload"
               :action="uploadConfig.action"
-              :headers="uploadHeaders"
               :data="uploadData"
+              :headers="uploadHeaders"
+              :before-upload="handleBeforeUpload"
+              :on-progress="handleUploadProgress"
+              :on-success="handleUploadSuccess"
+              :on-error="handleUploadError"
               :show-file-list="false"
-              :before-upload="beforeImageUpload"
-              :on-success="handleImageSuccess"
-              :on-error="handleImageError"
-              :on-progress="handleImageProgress"
+              accept="image/*"
+              class="image-uploader"
             >
-              <!-- 图片预览区域 -->
-              <div v-if="editForm.image_url && !imageUploading" class="image-preview-container">
-                <img :src="editForm.image_url" class="uploaded-image" alt="广告图片预览">
-                <div class="image-overlay">
-                  <i class="el-icon-view" @click.stop="handleImagePreview(editForm.image_url)"></i>
-                  <i class="el-icon-edit"></i>
+              <div class="upload-area">
+                <i class="el-icon-plus" v-if="!editForm.image_url && !imageUploading"></i>
+                <div class="upload-progress" v-if="imageUploading">
+                  <i class="el-icon-loading"></i>
+                  <span>上传中 {{ uploadProgress }}%</span>
                 </div>
-              </div>
-
-              <!-- 上传中状态 -->
-              <div v-else-if="imageUploading" class="upload-progress">
-                <el-progress type="circle" :percentage="uploadProgress" :width="100"></el-progress>
-                <span>上传中...</span>
-              </div>
-
-              <!-- 未上传状态 -->
-              <div v-else class="upload-placeholder">
-                <i class="el-icon-plus image-uploader-icon"></i>
-                <div class="upload-text">点击上传图片</div>
+                <img v-if="editForm.image_url && !imageUploading" :src="editForm.image_url" class="uploaded-image">
               </div>
             </el-upload>
 
-            <div class="image-upload-tip">
-              <p>支持 jpg、png、gif 格式，文件大小不超过 5MB</p>
-              <p v-if="editForm.image_url" class="upload-success">✓ 图片上传成功</p>
+            <!-- 上传提示和状态 -->
+            <div class="upload-info">
+              <p class="image-upload-tip">支持 jpg、png、gif 格式，文件大小不超过 5MB</p>
+              <p v-if="editForm.image_url && !imageUploading" class="upload-success">✓ 图片上传成功</p>
             </div>
           </div>
         </el-form-item>
@@ -245,7 +231,7 @@
 
         <!-- 每日定时模式 -->
         <div v-if="editForm.send_mode === 2">
-          <el-form-item label="每日发送时间" prop="daily_times">
+          <el-form-item label="每日发送时间">
             <div class="daily-times-section">
               <div class="time-inputs">
                 <el-time-picker
@@ -256,6 +242,7 @@
                   format="HH:mm"
                   value-format="HH:mm"
                   style="width: 120px; margin-right: 10px; margin-bottom: 10px;"
+                  @change="updateDailyTimes"
                 />
               </div>
               <div class="time-actions">
@@ -264,6 +251,7 @@
               </div>
               <div class="time-tip">
                 <p>可设置多个发送时间点，每天将在这些时间点发送广告</p>
+                <p style="color: #f56c6c;" v-if="!isValidDailyTimes">请至少设置一个每日发送时间</p>
               </div>
             </div>
           </el-form-item>
@@ -285,52 +273,40 @@
             />
             <span style="margin-left: 10px;">分钟</span>
             <div class="interval-tip">
-              <p>设置发送间隔时间，范围：1-1440分钟（1天）</p>
+              <p>设置广告发送的时间间隔，单位为分钟（1-1440分钟）</p>
             </div>
           </div>
         </el-form-item>
+
       </el-form>
 
-      <span slot="footer" class="dialog-footer">
+      <div slot="footer" class="dialog-footer">
         <el-button @click="editDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="editDialog.loading">
-          确定
-        </el-button>
-      </span>
+        <el-button type="primary" @click="handleSubmit" :loading="editDialog.loading">确定</el-button>
+      </div>
     </el-dialog>
 
-    <!-- 广告详情弹窗 -->
+    <!-- 详情对话框 -->
     <el-dialog
       title="广告详情"
       :visible.sync="detailDialog.visible"
       width="700px"
-      :close-on-click-modal="false"
+      append-to-body
     >
-      <div v-if="detailDialog.data" class="detail-content">
-        <!-- 图片展示 -->
-        <div class="detail-item" v-if="detailDialog.data.image_url">
-          <label>广告图片：</label>
-          <div class="detail-image-wrapper">
-            <img
-              :src="detailDialog.data.image_url"
-              class="detail-image"
-              alt="广告图片"
-              @click="handleImagePreview(detailDialog.data.image_url)"
-            />
-          </div>
-        </div>
-
+      <div class="detail-content" v-if="detailDialog.data">
         <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item">
-              <label>广告ID：</label>
-              <span>{{ detailDialog.data.id }}</span>
+              <label>标题：</label>
+              <span>{{ detailDialog.data.title }}</span>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="detail-item">
-              <label>广告标题：</label>
-              <span>{{ detailDialog.data.title }}</span>
+              <label>状态：</label>
+              <el-tag :type="getStatusType(detailDialog.data.status)" size="small">
+                {{ getStatusText(detailDialog.data.status) }}
+              </el-tag>
             </div>
           </el-col>
         </el-row>
@@ -338,7 +314,7 @@
         <el-row :gutter="20">
           <el-col :span="24">
             <div class="detail-item">
-              <label>广告内容：</label>
+              <label>内容：</label>
               <div class="content-text">{{ detailDialog.data.content }}</div>
             </div>
           </el-col>
@@ -354,11 +330,15 @@
             </div>
           </el-col>
           <el-col :span="12">
-            <div class="detail-item">
-              <label>状态：</label>
-              <el-tag :type="getStatusType(detailDialog.data.status)" size="small">
-                {{ getStatusText(detailDialog.data.status) }}
-              </el-tag>
+            <div class="detail-item" v-if="detailDialog.data.image_url">
+              <label>广告图片：</label>
+              <div class="detail-image-wrapper">
+                <img
+                  :src="detailDialog.data.image_url"
+                  class="detail-image"
+                  @click="handleImagePreview(detailDialog.data.image_url)"
+                />
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -481,8 +461,8 @@ export default {
       // 每日时间列表（用于界面显示）
       dailyTimesList: ['08:00'],
 
-      // 表单验证规则
-      editRules: {
+      // 基础表单验证规则
+      baseRules: {
         title: [
           { required: true, message: '请输入广告标题', trigger: 'blur' },
           { max: 200, message: '标题长度不能超过200个字符', trigger: 'blur' }
@@ -492,25 +472,13 @@ export default {
           { max: 1000, message: '内容长度不能超过1000个字符', trigger: 'blur' }
         ],
         image_url: [
-          {
-            validator: (rule, value, callback) => {
-              if (!value || value.trim() === '') {
-                callback(new Error('请上传广告图片'))
-              } else {
-                callback()
-              }
-            },
-            trigger: 'change'
-          }
+          { required: true, message: '请上传广告图片', trigger: 'change' }
         ],
         send_mode: [
           { required: true, message: '请选择发送模式', trigger: 'change' }
         ],
         send_time: [
           { required: true, message: '请选择发送时间', trigger: 'change' }
-        ],
-        daily_times: [
-          { required: true, message: '请设置每日发送时间', trigger: 'change' }
         ],
         interval_minutes: [
           { required: true, message: '请设置发送间隔', trigger: 'change' },
@@ -543,6 +511,40 @@ export default {
       uploadData: {
         object: 'advertisement'  // 上传对象类型
       }
+    }
+  },
+
+  computed: {
+    // 检查每日时间设置是否有效
+    isValidDailyTimes() {
+      if (this.editForm.send_mode !== 2) return true
+      const validTimes = this.dailyTimesList.filter(time => time && time.trim() !== '')
+      return validTimes.length > 0
+    },
+
+    // 动态计算当前需要的验证规则
+    currentRules() {
+      const rules = { ...this.baseRules }
+
+      // 根据发送模式调整验证规则
+      if (this.editForm.send_mode === 1) {
+        // 一次性定时：需要发送时间
+        rules.send_time = [
+          { required: true, message: '请选择发送时间', trigger: 'change' }
+        ]
+      } else if (this.editForm.send_mode === 2) {
+        // 每日定时：不需要 send_time 验证
+        delete rules.send_time
+      } else if (this.editForm.send_mode === 3) {
+        // 循环间隔：需要间隔时间
+        rules.interval_minutes = [
+          { required: true, message: '请设置发送间隔', trigger: 'change' },
+          { type: 'number', min: 1, max: 1440, message: '间隔时间范围：1-1440分钟', trigger: 'change' }
+        ]
+        delete rules.send_time
+      }
+
+      return rules
     }
   },
 
@@ -727,46 +729,38 @@ export default {
     // 添加每日时间
     addDailyTime() {
       this.dailyTimesList.push('08:00')
+      this.updateDailyTimes()
     },
 
     // 移除每日时间
     removeDailyTime() {
       if (this.dailyTimesList.length > 1) {
         this.dailyTimesList.pop()
+        this.updateDailyTimes()
+      }
+    },
+
+    // 更新每日时间到表单
+    updateDailyTimes() {
+      if (this.editForm.send_mode === 2) {
+        const validTimes = this.dailyTimesList.filter(time => time && time.trim() !== '')
+        this.editForm.daily_times = validTimes.join(',')
       }
     },
 
     // 提交表单
     handleSubmit() {
-      // 先检查图片是否已上传
-      if (!this.editForm.image_url) {
-        this.$message.error('请先上传广告图片')
-        return
+      // 每日定时模式的特殊验证
+      if (this.editForm.send_mode === 2) {
+        if (!this.isValidDailyTimes) {
+          this.$message.error('请至少设置一个每日发送时间')
+          return
+        }
+        this.updateDailyTimes()
       }
 
       this.$refs.editForm.validate(async (valid) => {
         if (valid) {
-          // 根据发送模式验证对应字段
-          if (this.editForm.send_mode === 1 && !this.editForm.send_time) {
-            this.$message.error('请选择发送时间')
-            return
-          }
-
-          if (this.editForm.send_mode === 2) {
-            // 过滤掉空的时间
-            const validTimes = this.dailyTimesList.filter(time => time)
-            if (validTimes.length === 0) {
-              this.$message.error('请至少设置一个每日发送时间')
-              return
-            }
-            this.editForm.daily_times = validTimes.join(',')
-          }
-
-          if (this.editForm.send_mode === 3 && (!this.editForm.interval_minutes || this.editForm.interval_minutes < 1)) {
-            this.$message.error('请设置正确的发送间隔')
-            return
-          }
-
           this.editDialog.loading = true
           try {
             const data = { ...this.editForm }
@@ -799,43 +793,33 @@ export default {
             }
 
             if (res.code === 1) {
-              this.$message.success(this.editDialog.isEdit ? '编辑成功' : '新增成功')
+              this.$message.success(this.editDialog.isEdit ? '更新成功' : '创建成功')
               this.editDialog.visible = false
               this.loadData()
             } else {
               this.$message.error(res.message || '操作失败')
             }
           } catch (error) {
-            console.error('操作失败:', error)
+            console.error('提交失败:', error)
             this.$message.error('网络错误，请稍后重试')
           } finally {
             this.editDialog.loading = false
           }
-        } else {
-          this.$message.error('请检查表单填写是否完整')
         }
       })
     },
 
-    // 对话框关闭处理
-    handleDialogClose() {
-      this.$refs.editForm && this.$refs.editForm.resetFields()
-      this.imageUploading = false
-      this.uploadProgress = 0
-      this.dailyTimesList = ['08:00']
-    },
-
-    // 图片上传前的验证
-    beforeImageUpload(file) {
-      const isImage = file.type.indexOf('image/') === 0
+    // 图片上传相关方法
+    handleBeforeUpload(file) {
+      const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(file.type)
       const isLt5M = file.size / 1024 / 1024 < 5
 
-      if (!isImage) {
-        this.$message.error('上传文件只能是图片格式!')
+      if (!isValidType) {
+        this.$message.error('只能上传 JPG/PNG/GIF 格式的图片!')
         return false
       }
       if (!isLt5M) {
-        this.$message.error('上传图片大小不能超过 5MB!')
+        this.$message.error('图片大小不能超过 5MB!')
         return false
       }
 
@@ -844,53 +828,34 @@ export default {
       return true
     },
 
-    // 图片上传成功
-    handleImageSuccess(response, file) {
+    handleUploadProgress(event) {
+      this.uploadProgress = Math.round(event.percent)
+    },
+
+    handleUploadSuccess(response) {
       this.imageUploading = false
-      console.log('上传响应:', response)
+      this.uploadProgress = 0
 
       if (response.code === 1) {
-        // 处理多种可能的响应格式
-        let imageUrl = ''
-        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-          // 如果返回的是数组，取第一个元素
-          imageUrl = response.data[0]
-        } else if (response.data && response.data.url) {
-          imageUrl = response.data.url
-        } else if (response.data && typeof response.data === 'string') {
-          imageUrl = response.data
-        } else if (response.url) {
-          imageUrl = response.url
-        }
-
-        if (imageUrl) {
-          this.editForm.image_url = imageUrl
-          this.$message.success('图片上传成功')
-
-          // 手动触发表单验证，清除图片字段的错误状态
-          this.$nextTick(() => {
-            if (this.$refs.editForm) {
-              this.$refs.editForm.validateField('image_url')
-            }
-          })
-        } else {
-          this.$message.error('图片上传成功，但获取图片地址失败')
-          console.error('无法从响应中获取图片URL:', response)
-        }
+        // 处理返回的数据格式，data是数组，取第一个元素作为图片URL
+        this.editForm.image_url = Array.isArray(response.data) ? response.data[0] : response.data.url || response.data
+        this.$message.success('图片上传成功')
+        // 触发表单验证，清除图片字段的错误状态
+        this.$nextTick(() => {
+          if (this.$refs.editForm) {
+            this.$refs.editForm.validateField('image_url')
+          }
+        })
       } else {
         this.$message.error(response.message || '图片上传失败')
       }
     },
 
-    // 图片上传失败
-    handleImageError(error) {
+    handleUploadError(error) {
       this.imageUploading = false
-      this.$message.error('图片上传失败，请重试')
-    },
-
-    // 图片上传进度
-    handleImageProgress(event) {
-      this.uploadProgress = Math.round(event.percent)
+      this.uploadProgress = 0
+      console.error('图片上传失败:', error)
+      this.$message.error('图片上传失败，请稍后重试')
     },
 
     // 图片预览
@@ -981,114 +946,62 @@ export default {
 }
 
 .table-image {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   object-fit: cover;
   border-radius: 4px;
   cursor: pointer;
 }
 
-.send-stats {
-  font-size: 12px;
-  line-height: 1.4;
+.table-image:hover {
+  opacity: 0.8;
 }
 
-.send-stats div {
-  margin-bottom: 2px;
-}
-
-.pagination-wrapper {
-  margin-top: 20px;
-  text-align: right;
-}
-
-/* 图片上传组件样式 */
-.image-upload-section {
+/* 图片上传样式 */
+.image-upload-container {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
 }
 
-.image-uploader .el-upload {
+.image-uploader {
   border: 1px dashed #d9d9d9;
   border-radius: 6px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  width: 200px;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.image-uploader .el-upload:hover {
+.image-uploader:hover {
   border-color: #409EFF;
 }
 
-/* 图片预览容器 */
-.image-preview-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.uploaded-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* 图片悬浮操作层 */
-.image-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.image-preview-container:hover .image-overlay {
-  opacity: 1;
-}
-
-.image-overlay i {
-  font-size: 20px;
-  margin: 0 10px;
-  cursor: pointer;
-}
-
-.image-overlay i:hover {
-  color: #409EFF;
-}
-
-/* 上传占位符样式 */
-.upload-placeholder {
+.upload-area {
+  width: 120px;
+  height: 120px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  background-color: #fbfdff;
+}
+
+.upload-area .el-icon-plus {
+  font-size: 28px;
   color: #8c939d;
 }
 
-.image-uploader-icon {
-  font-size: 28px;
-  margin-bottom: 10px;
+.uploaded-image {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  display: block;
 }
 
-.upload-text {
-  font-size: 14px;
+.upload-info {
+  flex: 1;
 }
 
-/* 上传进度样式 */
 .upload-progress {
   display: flex;
   flex-direction: column;
@@ -1177,10 +1090,14 @@ export default {
 }
 
 .detail-image {
-  max-width: 200px;
-  max-height: 200px;
+  max-width: 150px;
+  max-height: 150px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.detail-image:hover {
+  opacity: 0.8;
 }
 
 .content-text {
