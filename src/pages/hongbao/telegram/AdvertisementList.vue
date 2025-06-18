@@ -8,36 +8,6 @@
     <!-- 搜索筛选区域 -->
     <el-card class="search-card" shadow="never">
       <el-form :model="searchForm" inline size="small">
-        <el-form-item label="时间范围">
-          <el-date-picker
-            v-model="searchForm.dateRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="yyyy-MM-dd HH:mm:ss"
-            value-format="yyyy-MM-dd HH:mm:ss"
-            style="width: 350px;"
-          />
-        </el-form-item>
-
-        <el-form-item label="广告状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px;">
-            <el-option label="草稿" value="draft" />
-            <el-option label="活跃" value="active" />
-            <el-option label="完成" value="completed" />
-            <el-option label="取消" value="cancelled" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="发送模式">
-          <el-select v-model="searchForm.send_mode" placeholder="请选择模式" clearable style="width: 120px;">
-            <el-option label="立即发送" value="immediate" />
-            <el-option label="定时发送" value="scheduled" />
-            <el-option label="循环发送" value="recurring" />
-          </el-select>
-        </el-form-item>
-
         <el-form-item label="标题搜索">
           <el-input
             v-model="searchForm.title"
@@ -71,60 +41,76 @@
         :data="advertisementList"
         v-loading="loading"
         stripe
-        border
         style="width: 100%"
-        :default-sort="{prop: 'created_at', order: 'descending'}"
       >
-        <el-table-column prop="id" label="广告ID" width="80" align="center" />
+        <el-table-column label="ID" prop="id" width="80" align="center" />
 
-        <!-- 新增图片列 -->
-        <el-table-column label="广告图片" width="120" align="center">
+        <el-table-column label="标题" prop="title" width="200" show-overflow-tooltip />
+
+        <el-table-column label="内容" width="300" show-overflow-tooltip>
           <template slot-scope="scope">
-            <div class="image-preview">
-              <img
-                v-if="scope.row.image_url"
-                :src="scope.row.image_url"
-                alt="广告图片"
-                class="table-image"
-                @click="handleImagePreview(scope.row.image_url)"
-              />
-              <div v-else class="no-image">
-                <i class="el-icon-picture-outline"></i>
-                <span>暂无图片</span>
-              </div>
-            </div>
+            {{ scope.row.content && scope.row.content.length > 50 ?
+                scope.row.content.substring(0, 50) + '...' : scope.row.content }}
           </template>
         </el-table-column>
 
-        <el-table-column prop="title" label="广告标题" min-width="150" show-overflow-tooltip />
-
-        <el-table-column prop="content" label="广告内容" min-width="200" show-overflow-tooltip>
+        <el-table-column label="图片" width="100" align="center">
           <template slot-scope="scope">
-            {{ scope.row.content.length > 50 ? scope.row.content.substring(0, 50) + '...' : scope.row.content }}
+            <img
+              v-if="scope.row.image_url"
+              :src="scope.row.image_url"
+              class="table-image"
+              @click="handleImagePreview(scope.row.image_url)"
+            />
+            <span v-else>-</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="发送模式" width="100" align="center">
+        <el-table-column label="发送模式" width="120" align="center">
           <template slot-scope="scope">
             <el-tag :type="getSendModeType(scope.row.send_mode)" size="small">
-              {{ scope.row.send_mode_text || getSendModeText(scope.row.send_mode) }}
+              {{ getSendModeText(scope.row.send_mode) }}
             </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="发送时间/配置" width="180" show-overflow-tooltip>
+          <template slot-scope="scope">
+            <div v-if="scope.row.send_mode === 1">
+              {{ scope.row.send_time || '-' }}
+            </div>
+            <div v-else-if="scope.row.send_mode === 2">
+              每日：{{ scope.row.daily_times || '-' }}
+            </div>
+            <div v-else-if="scope.row.send_mode === 3">
+              间隔：{{ scope.row.interval_minutes }}分钟
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column label="状态" width="80" align="center">
           <template slot-scope="scope">
             <el-tag :type="getStatusType(scope.row.status)" size="small">
-              {{ scope.row.status_text || getStatusText(scope.row.status) }}
+              {{ getStatusText(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
 
         <el-table-column label="成功率" width="100" align="center">
           <template slot-scope="scope">
-            <span :style="{color: getSuccessRateColor(scope.row.success_rate || 0)}">
-              {{ (scope.row.success_rate || 0) }}%
+            <span :style="{color: getSuccessRateColor(scope.row.success_count, scope.row.total_sent_count)}">
+              {{ getSuccessRate(scope.row.success_count, scope.row.total_sent_count) }}%
             </span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="发送统计" width="120" align="center">
+          <template slot-scope="scope">
+            <div class="send-stats">
+              <div>总计：{{ scope.row.total_sent_count || 0 }}</div>
+              <div>成功：{{ scope.row.success_count || 0 }}</div>
+              <div>失败：{{ scope.row.failed_count || 0 }}</div>
+            </div>
           </template>
         </el-table-column>
 
@@ -172,54 +158,12 @@
         label-width="120px"
       >
         <el-form-item label="广告标题" prop="title">
-          <el-input v-model="editForm.title" placeholder="请输入广告标题" />
-        </el-form-item>
-
-        <!-- 图片上传组件 -->
-        <el-form-item label="广告图片" prop="image_url">
-          <el-upload
-            class="image-uploader"
-            :action="uploadConfig.action"
-            :headers="uploadHeaders"
-            :data="uploadData"
-            :show-file-list="false"
-            :on-success="handleImageSuccess"
-            :on-error="handleImageError"
-            :before-upload="beforeImageUpload"
-            :on-progress="handleImageProgress"
-            accept="image/*"
-            drag
-          >
-            <div v-if="editForm.image_url && !imageUploading" class="image-preview-wrapper">
-              <img :src="editForm.image_url" class="upload-image" alt="广告图片">
-              <div class="image-overlay">
-                <i class="el-icon-edit-outline"></i>
-                <span>点击或拖拽替换图片</span>
-              </div>
-            </div>
-            <div v-else-if="imageUploading" class="uploading-wrapper">
-              <el-progress
-                type="circle"
-                :percentage="uploadProgress"
-                :width="80"
-              />
-              <p>上传中...</p>
-            </div>
-            <div v-else class="upload-placeholder">
-              <i class="el-icon-upload"></i>
-              <div class="el-upload__text">
-                将图片拖到此处，或<em>点击上传</em>
-              </div>
-              <div class="el-upload__tip">
-                支持 jpg、png、gif 格式，文件大小不超过 5MB
-              </div>
-            </div>
-          </el-upload>
-
-          <!-- 调试信息 (开发时可见，生产环境可删除) -->
-          <div v-if="editForm.image_url" style="margin-top: 10px; font-size: 12px; color: #909399;">
-            图片地址: {{ editForm.image_url }}
-          </div>
+          <el-input
+            v-model="editForm.title"
+            placeholder="请输入广告标题"
+            maxlength="200"
+            show-word-limit
+          />
         </el-form-item>
 
         <el-form-item label="广告内容" prop="content">
@@ -228,21 +172,66 @@
             type="textarea"
             :rows="6"
             placeholder="请输入广告内容"
+            maxlength="1000"
+            show-word-limit
           />
         </el-form-item>
 
+        <el-form-item label="广告图片" prop="image_url">
+          <div class="image-upload-section">
+            <el-upload
+              class="image-uploader"
+              :action="uploadConfig.action"
+              :headers="uploadHeaders"
+              :data="uploadData"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :on-success="handleImageSuccess"
+              :on-error="handleImageError"
+              :on-progress="handleImageProgress"
+            >
+              <!-- 图片预览区域 -->
+              <div v-if="editForm.image_url && !imageUploading" class="image-preview-container">
+                <img :src="editForm.image_url" class="uploaded-image" alt="广告图片预览">
+                <div class="image-overlay">
+                  <i class="el-icon-view" @click.stop="handleImagePreview(editForm.image_url)"></i>
+                  <i class="el-icon-edit"></i>
+                </div>
+              </div>
+
+              <!-- 上传中状态 -->
+              <div v-else-if="imageUploading" class="upload-progress">
+                <el-progress type="circle" :percentage="uploadProgress" :width="100"></el-progress>
+                <span>上传中...</span>
+              </div>
+
+              <!-- 未上传状态 -->
+              <div v-else class="upload-placeholder">
+                <i class="el-icon-plus image-uploader-icon"></i>
+                <div class="upload-text">点击上传图片</div>
+              </div>
+            </el-upload>
+
+            <div class="image-upload-tip">
+              <p>支持 jpg、png、gif 格式，文件大小不超过 5MB</p>
+              <p v-if="editForm.image_url" class="upload-success">✓ 图片上传成功</p>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item label="发送模式" prop="send_mode">
-          <el-radio-group v-model="editForm.send_mode">
-            <el-radio label="immediate">立即发送</el-radio>
-            <el-radio label="scheduled">定时发送</el-radio>
-            <el-radio label="recurring">循环发送</el-radio>
+          <el-radio-group v-model="editForm.send_mode" @change="handleSendModeChange">
+            <el-radio :label="1">一次性定时</el-radio>
+            <el-radio :label="2">每日定时</el-radio>
+            <el-radio :label="3">循环间隔</el-radio>
           </el-radio-group>
         </el-form-item>
 
+        <!-- 一次性定时模式 -->
         <el-form-item
           label="发送时间"
           prop="send_time"
-          v-if="editForm.send_mode === 'scheduled'"
+          v-if="editForm.send_mode === 1"
         >
           <el-date-picker
             v-model="editForm.send_time"
@@ -250,38 +239,56 @@
             placeholder="选择发送时间"
             format="yyyy-MM-dd HH:mm:ss"
             value-format="yyyy-MM-dd HH:mm:ss"
+            style="width: 100%;"
           />
         </el-form-item>
 
-        <div v-if="editForm.send_mode === 'recurring'">
-          <el-form-item label="循环模式" prop="recurrence_pattern">
-            <el-select v-model="editForm.recurrence_pattern" placeholder="请选择循环模式">
-              <el-option label="每日" value="daily" />
-              <el-option label="每周" value="weekly" />
-              <el-option label="每月" value="monthly" />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="开始日期" prop="start_date">
-            <el-date-picker
-              v-model="editForm.start_date"
-              type="date"
-              placeholder="选择开始日期"
-              format="yyyy-MM-dd"
-              value-format="yyyy-MM-dd"
-            />
-          </el-form-item>
-
-          <el-form-item label="结束日期">
-            <el-date-picker
-              v-model="editForm.end_date"
-              type="date"
-              placeholder="选择结束日期(可选)"
-              format="yyyy-MM-dd"
-              value-format="yyyy-MM-dd"
-            />
+        <!-- 每日定时模式 -->
+        <div v-if="editForm.send_mode === 2">
+          <el-form-item label="每日发送时间" prop="daily_times">
+            <div class="daily-times-section">
+              <div class="time-inputs">
+                <el-time-picker
+                  v-for="(time, index) in dailyTimesList"
+                  :key="index"
+                  v-model="dailyTimesList[index]"
+                  placeholder="选择时间"
+                  format="HH:mm"
+                  value-format="HH:mm"
+                  style="width: 120px; margin-right: 10px; margin-bottom: 10px;"
+                />
+              </div>
+              <div class="time-actions">
+                <el-button size="small" @click="addDailyTime" icon="el-icon-plus">添加时间</el-button>
+                <el-button size="small" @click="removeDailyTime" icon="el-icon-minus" v-if="dailyTimesList.length > 1">移除时间</el-button>
+              </div>
+              <div class="time-tip">
+                <p>可设置多个发送时间点，每天将在这些时间点发送广告</p>
+              </div>
+            </div>
           </el-form-item>
         </div>
+
+        <!-- 循环间隔模式 -->
+        <el-form-item
+          label="发送间隔"
+          prop="interval_minutes"
+          v-if="editForm.send_mode === 3"
+        >
+          <div class="interval-section">
+            <el-input-number
+              v-model="editForm.interval_minutes"
+              :min="1"
+              :max="1440"
+              placeholder="间隔分钟数"
+              style="width: 200px;"
+            />
+            <span style="margin-left: 10px;">分钟</span>
+            <div class="interval-tip">
+              <p>设置发送间隔时间，范围：1-1440分钟（1天）</p>
+            </div>
+          </div>
+        </el-form-item>
       </el-form>
 
       <span slot="footer" class="dialog-footer">
@@ -296,7 +303,7 @@
     <el-dialog
       title="广告详情"
       :visible.sync="detailDialog.visible"
-      width="600px"
+      width="700px"
       :close-on-click-modal="false"
     >
       <div v-if="detailDialog.data" class="detail-content">
@@ -342,7 +349,7 @@
             <div class="detail-item">
               <label>发送模式：</label>
               <el-tag :type="getSendModeType(detailDialog.data.send_mode)" size="small">
-                {{ detailDialog.data.send_mode_text || getSendModeText(detailDialog.data.send_mode) }}
+                {{ getSendModeText(detailDialog.data.send_mode) }}
               </el-tag>
             </div>
           </el-col>
@@ -350,40 +357,56 @@
             <div class="detail-item">
               <label>状态：</label>
               <el-tag :type="getStatusType(detailDialog.data.status)" size="small">
-                {{ detailDialog.data.status_text || getStatusText(detailDialog.data.status) }}
+                {{ getStatusText(detailDialog.data.status) }}
               </el-tag>
             </div>
           </el-col>
         </el-row>
 
-        <el-row :gutter="20" v-if="detailDialog.data.send_time">
+        <el-row :gutter="20">
           <el-col :span="12">
-            <div class="detail-item">
+            <div class="detail-item" v-if="detailDialog.data.send_time">
               <label>发送时间：</label>
               <span>{{ detailDialog.data.send_time }}</span>
             </div>
+            <div class="detail-item" v-if="detailDialog.data.daily_times">
+              <label>每日时间：</label>
+              <span>{{ detailDialog.data.daily_times }}</span>
+            </div>
+            <div class="detail-item" v-if="detailDialog.data.interval_minutes">
+              <label>发送间隔：</label>
+              <span>{{ detailDialog.data.interval_minutes }}分钟</span>
+            </div>
           </el-col>
-          <el-col :span="12" v-if="detailDialog.data.recurrence_pattern">
+          <el-col :span="12">
             <div class="detail-item">
-              <label>循环模式：</label>
-              <span>{{ getRecurrenceText(detailDialog.data.recurrence_pattern) }}</span>
+              <label>生效期间：</label>
+              <span>{{ detailDialog.data.start_date }} 至 {{ detailDialog.data.end_date || '永久' }}</span>
             </div>
           </el-col>
         </el-row>
 
-        <el-row :gutter="20" v-if="detailDialog.data.success_rate !== undefined">
+        <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item">
-              <label>成功率：</label>
-              <span :style="{color: getSuccessRateColor(detailDialog.data.success_rate)}">
-                {{ detailDialog.data.success_rate }}%
-              </span>
+              <label>发送统计：</label>
+              <div class="send-stats-detail">
+                <div>总计：{{ detailDialog.data.total_sent_count || 0 }}</div>
+                <div>成功：{{ detailDialog.data.success_count || 0 }}</div>
+                <div>失败：{{ detailDialog.data.failed_count || 0 }}</div>
+                <div>成功率：{{ getSuccessRate(detailDialog.data.success_count, detailDialog.data.total_sent_count) }}%</div>
+              </div>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="detail-item">
-              <label>创建时间：</label>
-              <span>{{ detailDialog.data.created_at }}</span>
+              <label>时间信息：</label>
+              <div class="time-info">
+                <div>创建时间：{{ detailDialog.data.created_at }}</div>
+                <div>更新时间：{{ detailDialog.data.updated_at }}</div>
+                <div v-if="detailDialog.data.last_sent_time">最后发送：{{ detailDialog.data.last_sent_time }}</div>
+                <div v-if="detailDialog.data.next_send_time">下次发送：{{ detailDialog.data.next_send_time }}</div>
+              </div>
             </div>
           </el-col>
         </el-row>
@@ -424,9 +447,6 @@ export default {
 
       // 搜索表单
       searchForm: {
-        dateRange: [],
-        status: '',
-        send_mode: '',
         title: ''
       },
 
@@ -448,25 +468,40 @@ export default {
         id: null,
         title: '',
         content: '',
-        image_url: '',           // 新增：图片地址
-        image_file: null,        // 新增：待上传的图片文件
-        send_mode: 'immediate',
-        send_time: '',
-        recurrence_pattern: '',
-        start_date: '',
-        end_date: ''
+        image_url: '',
+        send_mode: 1,               // 发送模式：1=一次性定时, 2=每日定时, 3=循环间隔
+        send_time: '',              // 发送时间（模式1使用）
+        daily_times: '',            // 每日发送时间点（模式2使用）
+        interval_minutes: 30,       // 发送间隔分钟数（模式3使用）
+        start_date: '',             // 开始生效日期
+        end_date: '',               // 结束生效日期
+        status: 1                   // 状态：0=禁用, 1=启用
       },
+
+      // 每日时间列表（用于界面显示）
+      dailyTimesList: ['08:00'],
 
       // 表单验证规则
       editRules: {
         title: [
-          { required: true, message: '请输入广告标题', trigger: 'blur' }
+          { required: true, message: '请输入广告标题', trigger: 'blur' },
+          { max: 200, message: '标题长度不能超过200个字符', trigger: 'blur' }
         ],
         content: [
-          { required: true, message: '请输入广告内容', trigger: 'blur' }
+          { required: true, message: '请输入广告内容', trigger: 'blur' },
+          { max: 1000, message: '内容长度不能超过1000个字符', trigger: 'blur' }
         ],
         image_url: [
-          { required: true, message: '请上传广告图片', trigger: 'change' }
+          {
+            validator: (rule, value, callback) => {
+              if (!value || value.trim() === '') {
+                callback(new Error('请上传广告图片'))
+              } else {
+                callback()
+              }
+            },
+            trigger: 'change'
+          }
         ],
         send_mode: [
           { required: true, message: '请选择发送模式', trigger: 'change' }
@@ -474,11 +509,12 @@ export default {
         send_time: [
           { required: true, message: '请选择发送时间', trigger: 'change' }
         ],
-        recurrence_pattern: [
-          { required: true, message: '请选择循环模式', trigger: 'change' }
+        daily_times: [
+          { required: true, message: '请设置每日发送时间', trigger: 'change' }
         ],
-        start_date: [
-          { required: true, message: '请选择开始日期', trigger: 'change' }
+        interval_minutes: [
+          { required: true, message: '请设置发送间隔', trigger: 'change' },
+          { type: 'number', min: 1, max: 1440, message: '间隔时间范围：1-1440分钟', trigger: 'change' }
         ]
       },
 
@@ -546,15 +582,7 @@ export default {
       }
 
       // 添加搜索条件
-      if (this.searchForm.status) params.status = this.searchForm.status
-      if (this.searchForm.send_mode) params.send_mode = this.searchForm.send_mode
       if (this.searchForm.title) params.title = this.searchForm.title
-
-      // 处理时间范围
-      if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
-        params.start_date = this.searchForm.dateRange[0].split(' ')[0]
-        params.end_date = this.searchForm.dateRange[1].split(' ')[0]
-      }
 
       return params
     },
@@ -580,9 +608,6 @@ export default {
     // 重置
     handleReset() {
       this.searchForm = {
-        dateRange: [],
-        status: '',
-        send_mode: '',
         title: ''
       }
       this.currentPage = 1
@@ -597,13 +622,15 @@ export default {
         title: '',
         content: '',
         image_url: '',
-        image_file: null,
-        send_mode: 'immediate',
+        send_mode: 1,
         send_time: '',
-        recurrence_pattern: '',
+        daily_times: '',
+        interval_minutes: 30,
         start_date: '',
-        end_date: ''
+        end_date: '',
+        status: 1  // 默认启用
       }
+      this.dailyTimesList = ['08:00']
       this.editDialog.visible = true
     },
 
@@ -618,13 +645,22 @@ export default {
             title: res.data.title,
             content: res.data.content,
             image_url: res.data.image_url || '',
-            image_file: null,
             send_mode: res.data.send_mode,
             send_time: res.data.send_time,
-            recurrence_pattern: res.data.recurrence_pattern,
+            daily_times: res.data.daily_times,
+            interval_minutes: res.data.interval_minutes || 30,
             start_date: res.data.start_date,
-            end_date: res.data.end_date
+            end_date: res.data.end_date,
+            status: res.data.status
           }
+
+          // 处理每日时间列表
+          if (res.data.daily_times) {
+            this.dailyTimesList = res.data.daily_times.split(',')
+          } else {
+            this.dailyTimesList = ['08:00']
+          }
+
           this.editDialog.visible = true
         } else {
           this.$message.error(res.message || '获取广告详情失败')
@@ -673,15 +709,86 @@ export default {
       }
     },
 
+    // 发送模式改变处理
+    handleSendModeChange(value) {
+      // 所有模式都默认启用，清空日期范围
+      this.editForm.status = 1
+      this.editForm.start_date = ''
+      this.editForm.end_date = ''
+
+      // 清除其他模式的必填验证
+      this.$nextTick(() => {
+        if (this.$refs.editForm) {
+          this.$refs.editForm.clearValidate()
+        }
+      })
+    },
+
+    // 添加每日时间
+    addDailyTime() {
+      this.dailyTimesList.push('08:00')
+    },
+
+    // 移除每日时间
+    removeDailyTime() {
+      if (this.dailyTimesList.length > 1) {
+        this.dailyTimesList.pop()
+      }
+    },
+
     // 提交表单
     handleSubmit() {
+      // 先检查图片是否已上传
+      if (!this.editForm.image_url) {
+        this.$message.error('请先上传广告图片')
+        return
+      }
+
       this.$refs.editForm.validate(async (valid) => {
         if (valid) {
+          // 根据发送模式验证对应字段
+          if (this.editForm.send_mode === 1 && !this.editForm.send_time) {
+            this.$message.error('请选择发送时间')
+            return
+          }
+
+          if (this.editForm.send_mode === 2) {
+            // 过滤掉空的时间
+            const validTimes = this.dailyTimesList.filter(time => time)
+            if (validTimes.length === 0) {
+              this.$message.error('请至少设置一个每日发送时间')
+              return
+            }
+            this.editForm.daily_times = validTimes.join(',')
+          }
+
+          if (this.editForm.send_mode === 3 && (!this.editForm.interval_minutes || this.editForm.interval_minutes < 1)) {
+            this.$message.error('请设置正确的发送间隔')
+            return
+          }
+
           this.editDialog.loading = true
           try {
             const data = { ...this.editForm }
-            // 移除不需要提交的字段
-            delete data.image_file
+
+            // 所有模式都默认启用，清空日期范围
+            data.status = 1
+            data.start_date = null
+            data.end_date = null
+
+            if (data.send_mode === 1) {
+              // 一次性定时：清空其他模式字段
+              data.daily_times = null
+              data.interval_minutes = null
+            } else if (data.send_mode === 2) {
+              // 每日定时：清空其他模式字段
+              data.send_time = null
+              data.interval_minutes = null
+            } else if (data.send_mode === 3) {
+              // 循环间隔：清空其他模式字段
+              data.send_time = null
+              data.daily_times = null
+            }
 
             let res
             if (this.editDialog.isEdit) {
@@ -704,6 +811,8 @@ export default {
           } finally {
             this.editDialog.loading = false
           }
+        } else {
+          this.$message.error('请检查表单填写是否完整')
         }
       })
     },
@@ -713,6 +822,7 @@ export default {
       this.$refs.editForm && this.$refs.editForm.resetFields()
       this.imageUploading = false
       this.uploadProgress = 0
+      this.dailyTimesList = ['08:00']
     },
 
     // 图片上传前的验证
@@ -739,27 +849,30 @@ export default {
       this.imageUploading = false
       console.log('上传响应:', response)
 
-      // 根据实际响应结构调整
       if (response.code === 1) {
         // 处理多种可能的响应格式
         let imageUrl = ''
-        if (response.data && response.data.url) {
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          // 如果返回的是数组，取第一个元素
+          imageUrl = response.data[0]
+        } else if (response.data && response.data.url) {
           imageUrl = response.data.url
         } else if (response.data && typeof response.data === 'string') {
           imageUrl = response.data
         } else if (response.url) {
           imageUrl = response.url
-        } else if (typeof response.data === 'object' && response.data.length > 0) {
-          imageUrl = response.data[0] // 如果返回的是数组
         }
 
         if (imageUrl) {
           this.editForm.image_url = imageUrl
-          this.editForm.image_file = file
           this.$message.success('图片上传成功')
 
-          // 手动触发表单验证
-          this.$refs.editForm.validateField('image_url')
+          // 手动触发表单验证，清除图片字段的错误状态
+          this.$nextTick(() => {
+            if (this.$refs.editForm) {
+              this.$refs.editForm.validateField('image_url')
+            }
+          })
         } else {
           this.$message.error('图片上传成功，但获取图片地址失败')
           console.error('无法从响应中获取图片URL:', response)
@@ -773,300 +886,329 @@ export default {
     handleImageError(error) {
       this.imageUploading = false
       this.$message.error('图片上传失败，请重试')
-      console.error('上传失败:', error)
     },
 
     // 图片上传进度
-    handleImageProgress(event, file, fileList) {
-      this.uploadProgress = Math.round(event.percent) || 0
+    handleImageProgress(event) {
+      this.uploadProgress = Math.round(event.percent)
     },
 
     // 图片预览
-    handleImagePreview(imageUrl) {
-      this.imagePreviewDialog.url = imageUrl
+    handleImagePreview(url) {
+      this.imagePreviewDialog.url = url
       this.imagePreviewDialog.visible = true
-    },
-
-    // 获取发送模式类型
-    getSendModeType(mode) {
-      const modeMap = {
-        immediate: 'success',
-        scheduled: 'warning',
-        recurring: 'info'
-      }
-      return modeMap[mode] || 'info'
     },
 
     // 获取发送模式文本
     getSendModeText(mode) {
       const modeMap = {
-        immediate: '立即发送',
-        scheduled: '定时发送',
-        recurring: '循环发送'
+        1: '一次性定时',
+        2: '每日定时',
+        3: '循环间隔'
       }
-      return modeMap[mode] || mode
+      return modeMap[mode] || '未知'
     },
 
-    // 获取状态类型
-    getStatusType(status) {
-      const statusMap = {
-        draft: 'info',
-        active: 'success',
-        completed: 'warning',
-        cancelled: 'danger'
+    // 获取发送模式样式
+    getSendModeType(mode) {
+      const typeMap = {
+        1: 'warning',
+        2: 'success',
+        3: 'info'
       }
-      return statusMap[status] || 'info'
+      return typeMap[mode] || ''
     },
 
     // 获取状态文本
     getStatusText(status) {
       const statusMap = {
-        draft: '草稿',
-        active: '活跃',
-        completed: '完成',
-        cancelled: '取消'
+        0: '禁用',
+        1: '启用',
+        2: '已完成'
       }
-      return statusMap[status] || status
+      return statusMap[status] || '未知'
+    },
+
+    // 获取状态样式
+    getStatusType(status) {
+      const typeMap = {
+        0: 'danger',
+        1: 'success',
+        2: 'info'
+      }
+      return typeMap[status] || ''
+    },
+
+    // 计算成功率
+    getSuccessRate(successCount, totalCount) {
+      if (!totalCount || totalCount === 0) return 0
+      return Math.round((successCount / totalCount) * 100)
     },
 
     // 获取成功率颜色
-    getSuccessRateColor(rate) {
-      if (rate >= 80) return '#67c23a'
-      if (rate >= 60) return '#e6a23c'
-      return '#f56c6c'
-    },
-
-    // 获取循环模式文本
-    getRecurrenceText(pattern) {
-      const patternMap = {
-        daily: '每日',
-        weekly: '每周',
-        monthly: '每月'
-      }
-      return patternMap[pattern] || '-'
+    getSuccessRateColor(successCount, totalCount) {
+      const rate = this.getSuccessRate(successCount, totalCount)
+      if (rate >= 90) return '#67C23A'
+      if (rate >= 70) return '#E6A23C'
+      return '#F56C6C'
     }
   }
 }
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 .advertisement-list {
   padding: 20px;
+}
 
-  .page-header {
-    margin-bottom: 20px;
+.page-header {
+  margin-bottom: 20px;
+}
 
-    h2 {
-      margin: 0;
-      color: #303133;
-    }
-  }
+.page-header h2 {
+  margin: 0;
+  color: #303133;
+}
 
-  .search-card {
-    margin-bottom: 20px;
+.search-card,
+.action-card,
+.table-card {
+  margin-bottom: 20px;
+}
 
-    .el-form {
-      margin-bottom: 0;
-    }
-  }
+.search-card .el-form {
+  margin-bottom: 0;
+}
 
-  .action-card {
-    margin-bottom: 20px;
-  }
+.table-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-  .table-card {
-    .pagination-wrapper {
-      margin-top: 20px;
-      text-align: right;
-    }
+.send-stats {
+  font-size: 12px;
+  line-height: 1.4;
+}
 
-    // 表格中的图片预览
-    .image-preview {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 80px;
+.send-stats div {
+  margin-bottom: 2px;
+}
 
-      .table-image {
-        max-width: 80px;
-        max-height: 60px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: transform 0.2s;
+.pagination-wrapper {
+  margin-top: 20px;
+  text-align: right;
+}
 
-        &:hover {
-          transform: scale(1.1);
-        }
-      }
+/* 图片上传组件样式 */
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+}
 
-      .no-image {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        color: #C0C4CC;
-        font-size: 12px;
+.image-uploader .el-upload {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-        i {
-          font-size: 24px;
-          margin-bottom: 4px;
-        }
-      }
-    }
-  }
+.image-uploader .el-upload:hover {
+  border-color: #409EFF;
+}
 
-  // 图片上传组件样式
-  .image-uploader {
-    :deep(.el-upload) {
-      border: 1px dashed #d9d9d9;
-      border-radius: 6px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.2s;
+/* 图片预览容器 */
+.image-preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 
-      &:hover {
-        border-color: #409EFF;
-      }
-    }
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-    .image-preview-wrapper {
-      position: relative;
-      width: 200px;
-      height: 150px;
+/* 图片悬浮操作层 */
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
 
-      .upload-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
+.image-preview-container:hover .image-overlay {
+  opacity: 1;
+}
 
-      .image-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.3s;
+.image-overlay i {
+  font-size: 20px;
+  margin: 0 10px;
+  cursor: pointer;
+}
 
-        &:hover {
-          opacity: 1;
-        }
+.image-overlay i:hover {
+  color: #409EFF;
+}
 
-        i {
-          font-size: 20px;
-          margin-bottom: 8px;
-        }
+/* 上传占位符样式 */
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #8c939d;
+}
 
-        span {
-          font-size: 12px;
-        }
-      }
-    }
+.image-uploader-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
 
-    .uploading-wrapper {
-      width: 200px;
-      height: 150px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+.upload-text {
+  font-size: 14px;
+}
 
-      p {
-        margin-top: 15px;
-        color: #606266;
-      }
-    }
+/* 上传进度样式 */
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
 
-    .upload-placeholder {
-      width: 200px;
-      height: 150px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #606266;
+.upload-progress span {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #409EFF;
+}
 
-      i {
-        font-size: 28px;
-        color: #C0C4CC;
-        margin-bottom: 16px;
-      }
+.image-upload-tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #999;
+}
 
-      .el-upload__text {
-        color: #606266;
-        font-size: 14px;
-        text-align: center;
+.upload-success {
+  color: #67C23A !important;
+  font-weight: bold;
+}
 
-        em {
-          color: #409EFF;
-          font-style: normal;
-        }
-      }
+.daily-times-section {
+  width: 100%;
+}
 
-      .el-upload__tip {
-        font-size: 12px;
-        color: #C0C4CC;
-        margin-top: 7px;
-        text-align: center;
-      }
-    }
-  }
+.time-inputs {
+  margin-bottom: 10px;
+}
 
-  // 详情对话框样式
-  .detail-content {
-    .detail-item {
-      margin-bottom: 15px;
+.time-actions {
+  margin-bottom: 10px;
+}
 
-      label {
-        font-weight: bold;
-        color: #606266;
-      }
+.time-tip {
+  font-size: 12px;
+  color: #999;
+}
 
-      .content-text {
-        margin-top: 8px;
-        padding: 10px;
-        background: #f5f7fa;
-        border-radius: 4px;
-        line-height: 1.6;
-        white-space: pre-wrap;
-      }
-    }
+.interval-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
 
-    .detail-image-wrapper {
-      margin-top: 8px;
+.interval-tip {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #999;
+}
 
-      .detail-image {
-        max-width: 300px;
-        max-height: 200px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: transform 0.2s;
+.date-range-section {
+  display: flex;
+  align-items: center;
+}
 
-        &:hover {
-          transform: scale(1.05);
-        }
-      }
-    }
-  }
+.date-tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #999;
+}
 
-  // 图片预览对话框
-  .image-preview-dialog {
-    text-align: center;
+/* 详情弹窗样式 */
+.detail-content {
+  padding: 0;
+}
 
-    .preview-image {
-      max-width: 100%;
-      max-height: 70vh;
-      border-radius: 4px;
-    }
-  }
+.detail-item {
+  margin-bottom: 15px;
+}
+
+.detail-item label {
+  font-weight: bold;
+  color: #333;
+  margin-right: 10px;
+  min-width: 80px;
+  display: inline-block;
+}
+
+.detail-image-wrapper {
+  margin-top: 10px;
+}
+
+.detail-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.content-text {
+  background: #f5f7fa;
+  padding: 10px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.send-stats-detail {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.time-info {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 图片预览弹窗 */
+.image-preview-dialog {
+  text-align: center;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
 }
 </style>
