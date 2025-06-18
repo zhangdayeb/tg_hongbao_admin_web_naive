@@ -1,2 +1,2 @@
-export const baseUrl = 'https://authapi.wuming888.com';
-export const uploadImageUrl = 'https://authapi.wuming888.com/upload/video';
+export const baseUrl = 'https://tgadminapi.oyim.top';
+export const uploadImageUrl = 'https://tgadminapi.oyim.top/upload/video';
