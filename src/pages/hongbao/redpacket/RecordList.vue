@@ -85,7 +85,7 @@
       >
         <el-table-column prop="packet_id" label="红包ID" width="180" show-overflow-tooltip />
 
-        <el-table-column prop="packet_title" label="红包标题" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="red_packet_title" label="红包标题" min-width="150" show-overflow-tooltip />
 
         <el-table-column prop="username" label="领取用户" width="150" show-overflow-tooltip />
 
@@ -103,25 +103,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="is_best_text" label="手气最佳" width="100" align="center">
-          <template slot-scope="scope">
-            <el-tag
-              v-if="scope.row.is_best == 1"
-              size="small"
-              type="warning"
-              style="background: linear-gradient(45deg, #ffd700, #ffed4a); color: #8b4513; border: none;"
-            >
-              <i class="el-icon-trophy"></i> 最佳
-            </el-tag>
-            <span v-else style="color: #c0c4cc;">-</span>
-          </template>
-        </el-table-column>
+        <el-table-column prop="is_best_text" label="手气最佳" width="100" align="center" />
 
         <el-table-column prop="group_name" label="所属群组" width="150" show-overflow-tooltip />
 
         <el-table-column prop="sender_name" label="发包用户" width="120" show-overflow-tooltip />
 
-        <el-table-column prop="grab_time" label="领取时间" width="180" />
+        <el-table-column prop="created_at_format" label="领取时间" width="180" />
 
         <el-table-column label="操作" width="80" align="center" fixed="right">
           <template slot-scope="scope">
