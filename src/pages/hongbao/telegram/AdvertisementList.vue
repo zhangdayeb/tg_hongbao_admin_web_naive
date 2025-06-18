@@ -77,6 +77,25 @@
       >
         <el-table-column prop="id" label="广告ID" width="80" align="center" />
 
+        <!-- 新增图片列 -->
+        <el-table-column label="广告图片" width="120" align="center">
+          <template slot-scope="scope">
+            <div class="image-preview">
+              <img
+                v-if="scope.row.image_url"
+                :src="scope.row.image_url"
+                alt="广告图片"
+                class="table-image"
+                @click="handleImagePreview(scope.row.image_url)"
+              />
+              <div v-else class="no-image">
+                <i class="el-icon-picture-outline"></i>
+                <span>暂无图片</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="title" label="广告标题" min-width="150" show-overflow-tooltip />
 
         <el-table-column prop="content" label="广告内容" min-width="200" show-overflow-tooltip>
@@ -85,68 +104,39 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="send_mode_text" label="发送模式" width="100" align="center">
+        <el-table-column label="发送模式" width="100" align="center">
           <template slot-scope="scope">
             <el-tag :type="getSendModeType(scope.row.send_mode)" size="small">
-              {{ scope.row.send_mode_text }}
+              {{ scope.row.send_mode_text || getSendModeText(scope.row.send_mode) }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="status_text" label="状态" width="100" align="center">
+        <el-table-column label="状态" width="80" align="center">
           <template slot-scope="scope">
             <el-tag :type="getStatusType(scope.row.status)" size="small">
-              {{ scope.row.status_text }}
+              {{ scope.row.status_text || getStatusText(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <el-table-column prop="send_time" label="发送时间" width="180">
+        <el-table-column label="成功率" width="100" align="center">
           <template slot-scope="scope">
-            {{ scope.row.send_time || '-' }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="sent_count" label="已发送" width="80" align="center">
-          <template slot-scope="scope">
-            {{ scope.row.sent_count || 0 }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="success_rate" label="成功率" width="100" align="center">
-          <template slot-scope="scope">
-            <span :style="{color: getSuccessRateColor(scope.row.success_rate)}">
-              {{ scope.row.success_rate || 0 }}%
+            <span :style="{color: getSuccessRateColor(scope.row.success_rate || 0)}">
+              {{ (scope.row.success_rate || 0) }}%
             </span>
           </template>
         </el-table-column>
 
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-
         <el-table-column label="操作" width="180" align="center" fixed="right">
           <template slot-scope="scope">
-            <el-button
-              type="text"
-              size="small"
-              @click="handleViewDetail(scope.row)"
-            >
+            <el-button type="text" size="small" @click="handleViewDetail(scope.row)">
               详情
             </el-button>
-            <el-button
-              type="text"
-              size="small"
-              @click="handleEdit(scope.row)"
-              :disabled="scope.row.status === 'completed'"
-            >
+            <el-button type="text" size="small" @click="handleEdit(scope.row)">
               编辑
             </el-button>
-            <el-button
-              type="text"
-              size="small"
-              style="color: #f56c6c;"
-              @click="handleDelete(scope.row)"
-              :disabled="scope.row.status === 'active'"
-            >
+            <el-button type="text" size="small" @click="handleDelete(scope.row)" style="color: #f56c6c;">
               删除
             </el-button>
           </template>
@@ -167,12 +157,13 @@
       </div>
     </el-card>
 
-    <!-- 新增/编辑广告弹窗 -->
+    <!-- 编辑/新增广告弹窗 -->
     <el-dialog
       :title="editDialog.isEdit ? '编辑广告' : '新增广告'"
       :visible.sync="editDialog.visible"
       width="800px"
       :close-on-click-modal="false"
+      @close="handleDialogClose"
     >
       <el-form
         :model="editForm"
@@ -182,6 +173,53 @@
       >
         <el-form-item label="广告标题" prop="title">
           <el-input v-model="editForm.title" placeholder="请输入广告标题" />
+        </el-form-item>
+
+        <!-- 图片上传组件 -->
+        <el-form-item label="广告图片" prop="image_url">
+          <el-upload
+            class="image-uploader"
+            :action="uploadConfig.action"
+            :headers="uploadHeaders"
+            :data="uploadData"
+            :show-file-list="false"
+            :on-success="handleImageSuccess"
+            :on-error="handleImageError"
+            :before-upload="beforeImageUpload"
+            :on-progress="handleImageProgress"
+            accept="image/*"
+            drag
+          >
+            <div v-if="editForm.image_url && !imageUploading" class="image-preview-wrapper">
+              <img :src="editForm.image_url" class="upload-image" alt="广告图片">
+              <div class="image-overlay">
+                <i class="el-icon-edit-outline"></i>
+                <span>点击或拖拽替换图片</span>
+              </div>
+            </div>
+            <div v-else-if="imageUploading" class="uploading-wrapper">
+              <el-progress
+                type="circle"
+                :percentage="uploadProgress"
+                :width="80"
+              />
+              <p>上传中...</p>
+            </div>
+            <div v-else class="upload-placeholder">
+              <i class="el-icon-upload"></i>
+              <div class="el-upload__text">
+                将图片拖到此处，或<em>点击上传</em>
+              </div>
+              <div class="el-upload__tip">
+                支持 jpg、png、gif 格式，文件大小不超过 5MB
+              </div>
+            </div>
+          </el-upload>
+
+          <!-- 调试信息 (开发时可见，生产环境可删除) -->
+          <div v-if="editForm.image_url" style="margin-top: 10px; font-size: 12px; color: #909399;">
+            图片地址: {{ editForm.image_url }}
+          </div>
         </el-form-item>
 
         <el-form-item label="广告内容" prop="content">
@@ -262,6 +300,19 @@
       :close-on-click-modal="false"
     >
       <div v-if="detailDialog.data" class="detail-content">
+        <!-- 图片展示 -->
+        <div class="detail-item" v-if="detailDialog.data.image_url">
+          <label>广告图片：</label>
+          <div class="detail-image-wrapper">
+            <img
+              :src="detailDialog.data.image_url"
+              class="detail-image"
+              alt="广告图片"
+              @click="handleImagePreview(detailDialog.data.image_url)"
+            />
+          </div>
+        </div>
+
         <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item">
@@ -291,7 +342,7 @@
             <div class="detail-item">
               <label>发送模式：</label>
               <el-tag :type="getSendModeType(detailDialog.data.send_mode)" size="small">
-                {{ detailDialog.data.send_mode_text }}
+                {{ detailDialog.data.send_mode_text || getSendModeText(detailDialog.data.send_mode) }}
               </el-tag>
             </div>
           </el-col>
@@ -299,17 +350,34 @@
             <div class="detail-item">
               <label>状态：</label>
               <el-tag :type="getStatusType(detailDialog.data.status)" size="small">
-                {{ detailDialog.data.status_text }}
+                {{ detailDialog.data.status_text || getStatusText(detailDialog.data.status) }}
               </el-tag>
             </div>
           </el-col>
         </el-row>
 
-        <el-row :gutter="20">
+        <el-row :gutter="20" v-if="detailDialog.data.send_time">
           <el-col :span="12">
             <div class="detail-item">
               <label>发送时间：</label>
-              <span>{{ detailDialog.data.send_time || '-' }}</span>
+              <span>{{ detailDialog.data.send_time }}</span>
+            </div>
+          </el-col>
+          <el-col :span="12" v-if="detailDialog.data.recurrence_pattern">
+            <div class="detail-item">
+              <label>循环模式：</label>
+              <span>{{ getRecurrenceText(detailDialog.data.recurrence_pattern) }}</span>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20" v-if="detailDialog.data.success_rate !== undefined">
+          <el-col :span="12">
+            <div class="detail-item">
+              <label>成功率：</label>
+              <span :style="{color: getSuccessRateColor(detailDialog.data.success_rate)}">
+                {{ detailDialog.data.success_rate }}%
+              </span>
             </div>
           </el-col>
           <el-col :span="12">
@@ -319,49 +387,20 @@
             </div>
           </el-col>
         </el-row>
-
-        <el-row :gutter="20" v-if="detailDialog.data.send_mode === 'recurring'">
-          <el-col :span="12">
-            <div class="detail-item">
-              <label>循环模式：</label>
-              <span>{{ getRecurrenceText(detailDialog.data.recurrence_pattern) }}</span>
-            </div>
-          </el-col>
-          <el-col :span="12">
-            <div class="detail-item">
-              <label>开始日期：</label>
-              <span>{{ detailDialog.data.start_date || '-' }}</span>
-            </div>
-          </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <div class="detail-item">
-              <label>已发送：</label>
-              <span>{{ detailDialog.data.sent_count || 0 }}</span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="detail-item">
-              <label>成功率：</label>
-              <span :style="{color: getSuccessRateColor(detailDialog.data.success_rate)}">
-                {{ detailDialog.data.success_rate || 0 }}%
-              </span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="detail-item">
-              <label>结束日期：</label>
-              <span>{{ detailDialog.data.end_date || '-' }}</span>
-            </div>
-          </el-col>
-        </el-row>
       </div>
+    </el-dialog>
 
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="detailDialog.visible = false">关闭</el-button>
-      </span>
+    <!-- 图片预览弹窗 -->
+    <el-dialog
+      title="图片预览"
+      :visible.sync="imagePreviewDialog.visible"
+      width="60%"
+      :close-on-click-modal="true"
+      append-to-body
+    >
+      <div class="image-preview-dialog">
+        <img :src="imagePreviewDialog.url" alt="图片预览" class="preview-image" />
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -374,6 +413,8 @@ import {
   updateAdvertisementApi,
   deleteAdvertisementApi
 } from '@/api/telegramApi'
+
+import { uploadImageUrl } from '@/utils/config.js'
 
 export default {
   name: 'AdvertisementList',
@@ -407,6 +448,8 @@ export default {
         id: null,
         title: '',
         content: '',
+        image_url: '',           // 新增：图片地址
+        image_file: null,        // 新增：待上传的图片文件
         send_mode: 'immediate',
         send_time: '',
         recurrence_pattern: '',
@@ -421,6 +464,9 @@ export default {
         ],
         content: [
           { required: true, message: '请输入广告内容', trigger: 'blur' }
+        ],
+        image_url: [
+          { required: true, message: '请上传广告图片', trigger: 'change' }
         ],
         send_mode: [
           { required: true, message: '请选择发送模式', trigger: 'change' }
@@ -440,6 +486,26 @@ export default {
       detailDialog: {
         visible: false,
         data: null
+      },
+
+      // 图片预览对话框
+      imagePreviewDialog: {
+        visible: false,
+        url: ''
+      },
+
+      // 图片上传相关
+      imageUploading: false,
+      uploadProgress: 0,
+      uploadConfig: {
+        action: uploadImageUrl
+      },
+      uploadHeaders: {
+        // 如果需要token，在这里设置
+        // 'Authorization': 'Bearer ' + this.$store.getters.token
+      },
+      uploadData: {
+        object: 'advertisement'  // 上传对象类型
       }
     }
   },
@@ -530,6 +596,8 @@ export default {
         id: null,
         title: '',
         content: '',
+        image_url: '',
+        image_file: null,
         send_mode: 'immediate',
         send_time: '',
         recurrence_pattern: '',
@@ -549,6 +617,8 @@ export default {
             id: res.data.id,
             title: res.data.title,
             content: res.data.content,
+            image_url: res.data.image_url || '',
+            image_file: null,
             send_mode: res.data.send_mode,
             send_time: res.data.send_time,
             recurrence_pattern: res.data.recurrence_pattern,
@@ -610,6 +680,8 @@ export default {
           this.editDialog.loading = true
           try {
             const data = { ...this.editForm }
+            // 移除不需要提交的字段
+            delete data.image_file
 
             let res
             if (this.editDialog.isEdit) {
@@ -636,6 +708,85 @@ export default {
       })
     },
 
+    // 对话框关闭处理
+    handleDialogClose() {
+      this.$refs.editForm && this.$refs.editForm.resetFields()
+      this.imageUploading = false
+      this.uploadProgress = 0
+    },
+
+    // 图片上传前的验证
+    beforeImageUpload(file) {
+      const isImage = file.type.indexOf('image/') === 0
+      const isLt5M = file.size / 1024 / 1024 < 5
+
+      if (!isImage) {
+        this.$message.error('上传文件只能是图片格式!')
+        return false
+      }
+      if (!isLt5M) {
+        this.$message.error('上传图片大小不能超过 5MB!')
+        return false
+      }
+
+      this.imageUploading = true
+      this.uploadProgress = 0
+      return true
+    },
+
+    // 图片上传成功
+    handleImageSuccess(response, file) {
+      this.imageUploading = false
+      console.log('上传响应:', response)
+
+      // 根据实际响应结构调整
+      if (response.code === 1) {
+        // 处理多种可能的响应格式
+        let imageUrl = ''
+        if (response.data && response.data.url) {
+          imageUrl = response.data.url
+        } else if (response.data && typeof response.data === 'string') {
+          imageUrl = response.data
+        } else if (response.url) {
+          imageUrl = response.url
+        } else if (typeof response.data === 'object' && response.data.length > 0) {
+          imageUrl = response.data[0] // 如果返回的是数组
+        }
+
+        if (imageUrl) {
+          this.editForm.image_url = imageUrl
+          this.editForm.image_file = file
+          this.$message.success('图片上传成功')
+
+          // 手动触发表单验证
+          this.$refs.editForm.validateField('image_url')
+        } else {
+          this.$message.error('图片上传成功，但获取图片地址失败')
+          console.error('无法从响应中获取图片URL:', response)
+        }
+      } else {
+        this.$message.error(response.message || '图片上传失败')
+      }
+    },
+
+    // 图片上传失败
+    handleImageError(error) {
+      this.imageUploading = false
+      this.$message.error('图片上传失败，请重试')
+      console.error('上传失败:', error)
+    },
+
+    // 图片上传进度
+    handleImageProgress(event, file, fileList) {
+      this.uploadProgress = Math.round(event.percent) || 0
+    },
+
+    // 图片预览
+    handleImagePreview(imageUrl) {
+      this.imagePreviewDialog.url = imageUrl
+      this.imagePreviewDialog.visible = true
+    },
+
     // 获取发送模式类型
     getSendModeType(mode) {
       const modeMap = {
@@ -644,6 +795,16 @@ export default {
         recurring: 'info'
       }
       return modeMap[mode] || 'info'
+    },
+
+    // 获取发送模式文本
+    getSendModeText(mode) {
+      const modeMap = {
+        immediate: '立即发送',
+        scheduled: '定时发送',
+        recurring: '循环发送'
+      }
+      return modeMap[mode] || mode
     },
 
     // 获取状态类型
@@ -655,6 +816,17 @@ export default {
         cancelled: 'danger'
       }
       return statusMap[status] || 'info'
+    },
+
+    // 获取状态文本
+    getStatusText(status) {
+      const statusMap = {
+        draft: '草稿',
+        active: '活跃',
+        completed: '完成',
+        cancelled: '取消'
+      }
+      return statusMap[status] || status
     },
 
     // 获取成功率颜色
@@ -707,8 +879,149 @@ export default {
       margin-top: 20px;
       text-align: right;
     }
+
+    // 表格中的图片预览
+    .image-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80px;
+
+      .table-image {
+        max-width: 80px;
+        max-height: 60px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.1);
+        }
+      }
+
+      .no-image {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #C0C4CC;
+        font-size: 12px;
+
+        i {
+          font-size: 24px;
+          margin-bottom: 4px;
+        }
+      }
+    }
   }
 
+  // 图片上传组件样式
+  .image-uploader {
+    :deep(.el-upload) {
+      border: 1px dashed #d9d9d9;
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+
+      &:hover {
+        border-color: #409EFF;
+      }
+    }
+
+    .image-preview-wrapper {
+      position: relative;
+      width: 200px;
+      height: 150px;
+
+      .upload-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        i {
+          font-size: 20px;
+          margin-bottom: 8px;
+        }
+
+        span {
+          font-size: 12px;
+        }
+      }
+    }
+
+    .uploading-wrapper {
+      width: 200px;
+      height: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      p {
+        margin-top: 15px;
+        color: #606266;
+      }
+    }
+
+    .upload-placeholder {
+      width: 200px;
+      height: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #606266;
+
+      i {
+        font-size: 28px;
+        color: #C0C4CC;
+        margin-bottom: 16px;
+      }
+
+      .el-upload__text {
+        color: #606266;
+        font-size: 14px;
+        text-align: center;
+
+        em {
+          color: #409EFF;
+          font-style: normal;
+        }
+      }
+
+      .el-upload__tip {
+        font-size: 12px;
+        color: #C0C4CC;
+        margin-top: 7px;
+        text-align: center;
+      }
+    }
+  }
+
+  // 详情对话框样式
   .detail-content {
     .detail-item {
       margin-bottom: 15px;
@@ -726,6 +1039,33 @@ export default {
         line-height: 1.6;
         white-space: pre-wrap;
       }
+    }
+
+    .detail-image-wrapper {
+      margin-top: 8px;
+
+      .detail-image {
+        max-width: 300px;
+        max-height: 200px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+          transform: scale(1.05);
+        }
+      }
+    }
+  }
+
+  // 图片预览对话框
+  .image-preview-dialog {
+    text-align: center;
+
+    .preview-image {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 4px;
     }
   }
 }
