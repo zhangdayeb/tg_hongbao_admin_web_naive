@@ -38,17 +38,6 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="所属群组">
-          <el-select v-model="searchForm.chat_id" placeholder="请选择群组" clearable style="width: 180px;">
-            <el-option
-              v-for="group in groupList"
-              :key="group.crowd_id"
-              :label="group.title"
-              :value="group.crowd_id"
-            />
-          </el-select>
-        </el-form-item>
-
         <el-form-item label="搜索">
           <el-input
             v-model="searchForm.keyword"
@@ -239,13 +228,13 @@
           <el-col :span="12">
             <div class="detail-item">
               <label>发送者：</label>
-              <span>{{ detailDialog.data.sender_info?.user_name }}</span>
+              <span>{{ detailDialog.data.sender_info && detailDialog.data.sender_info.user_name }}</span>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="detail-item">
               <label>所属群组：</label>
-              <span>{{ detailDialog.data.group_info?.title }}</span>
+              <span>{{ detailDialog.data.group_info && detailDialog.data.group_info.title }}</span>
             </div>
           </el-col>
         </el-row>
@@ -271,25 +260,25 @@
           <el-row :gutter="20">
             <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-value">{{ detailDialog.data.stats?.grabbed_amount || 0 }}</div>
+                <div class="stat-value">{{ detailDialog.data.stats && detailDialog.data.stats.grabbed_amount || 0 }}</div>
                 <div class="stat-label">已抢金额</div>
               </div>
             </el-col>
             <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-value">{{ detailDialog.data.stats?.grabbed_count || 0 }}</div>
+                <div class="stat-value">{{ detailDialog.data.stats && detailDialog.data.stats.grabbed_count || 0 }}</div>
                 <div class="stat-label">已抢个数</div>
               </div>
             </el-col>
             <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-value">{{ detailDialog.data.stats?.completion_rate || 0 }}%</div>
+                <div class="stat-value">{{ detailDialog.data.stats && detailDialog.data.stats.completion_rate || 0 }}%</div>
                 <div class="stat-label">完成率</div>
               </div>
             </el-col>
             <el-col :span="6">
               <div class="stat-item">
-                <div class="stat-value">{{ detailDialog.data.stats?.avg_amount || 0 }}</div>
+                <div class="stat-value">{{ detailDialog.data.stats && detailDialog.data.stats.avg_amount || 0 }}</div>
                 <div class="stat-label">平均金额</div>
               </div>
             </el-col>
@@ -307,8 +296,7 @@
 <script>
 import {
   getRedPacketListApi,
-  getRedPacketDetailApi,
-  getActiveGroupsApi
+  getRedPacketDetailApi
 } from '@/api/telegramApi'
 
 export default {
@@ -322,7 +310,6 @@ export default {
         dateRange: [],
         status: '',
         packet_type: '',
-        chat_id: '',
         keyword: ''
       },
 
@@ -331,9 +318,6 @@ export default {
       totalCount: 0,
       currentPage: 1,
       pageSize: 20,
-
-      // 群组列表
-      groupList: [],
 
       // 详情弹窗
       detailDialog: {
@@ -344,23 +328,10 @@ export default {
   },
 
   mounted() {
-    this.loadGroupList()
     this.loadData()
   },
 
   methods: {
-    // 加载群组列表
-    async loadGroupList() {
-      try {
-        const res = await getActiveGroupsApi()
-        if (res.code === 1) {
-          this.groupList = res.data || []
-        }
-      } catch (error) {
-        console.error('加载群组列表失败:', error)
-      }
-    },
-
     // 加载数据
     async loadData() {
       this.loading = true
@@ -394,7 +365,6 @@ export default {
       // 添加搜索条件
       if (this.searchForm.status) params.status = this.searchForm.status
       if (this.searchForm.packet_type) params.packet_type = this.searchForm.packet_type
-      if (this.searchForm.chat_id) params.chat_id = this.searchForm.chat_id
       if (this.searchForm.keyword) {
         params.packet_id = this.searchForm.keyword
         params.title = this.searchForm.keyword
@@ -433,7 +403,6 @@ export default {
         dateRange: [],
         status: '',
         packet_type: '',
-        chat_id: '',
         keyword: ''
       }
       this.currentPage = 1

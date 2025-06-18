@@ -30,17 +30,6 @@
           />
         </el-form-item>
 
-        <el-form-item label="所属群组">
-          <el-select v-model="searchForm.chat_id" placeholder="请选择群组" clearable style="width: 180px;">
-            <el-option
-              v-for="group in groupList"
-              :key="group.crowd_id"
-              :label="group.title"
-              :value="group.crowd_id"
-            />
-          </el-select>
-        </el-form-item>
-
         <el-form-item label="金额范围">
           <el-input
             v-model="searchForm.min_amount"
@@ -262,9 +251,7 @@
 
 <script>
 import {
-  getRedPacketRecordsApi,
-  getRecordDetailApi,
-  getActiveGroupsApi
+  getRedPacketRecordsApi
 } from '@/api/telegramApi'
 
 export default {
@@ -277,7 +264,6 @@ export default {
       searchForm: {
         dateRange: [],
         userKeyword: '',
-        chat_id: '',
         min_amount: '',
         max_amount: '',
         is_best: '',
@@ -290,9 +276,6 @@ export default {
       currentPage: 1,
       pageSize: 20,
 
-      // 群组列表
-      groupList: [],
-
       // 详情弹窗
       detailDialog: {
         visible: false,
@@ -302,23 +285,10 @@ export default {
   },
 
   mounted() {
-    this.loadGroupList()
     this.loadData()
   },
 
   methods: {
-    // 加载群组列表
-    async loadGroupList() {
-      try {
-        const res = await getActiveGroupsApi()
-        if (res.code === 1) {
-          this.groupList = res.data || []
-        }
-      } catch (error) {
-        console.error('加载群组列表失败:', error)
-      }
-    },
-
     // 加载数据
     async loadData() {
       this.loading = true
@@ -354,7 +324,6 @@ export default {
         params.user_tg_id = this.searchForm.userKeyword
         params.username = this.searchForm.userKeyword
       }
-      if (this.searchForm.chat_id) params.chat_id = this.searchForm.chat_id
       if (this.searchForm.min_amount) params.min_amount = this.searchForm.min_amount
       if (this.searchForm.max_amount) params.max_amount = this.searchForm.max_amount
       if (this.searchForm.is_best !== '') params.is_best = this.searchForm.is_best
@@ -392,7 +361,6 @@ export default {
       this.searchForm = {
         dateRange: [],
         userKeyword: '',
-        chat_id: '',
         min_amount: '',
         max_amount: '',
         is_best: '',
@@ -402,23 +370,10 @@ export default {
       this.loadData()
     },
 
-    // 查看详情
-    async handleViewDetail(row) {
-      try {
-        const res = await getRecordDetailApi({ id: row.id })
-        if (res.code === 1) {
-          this.detailDialog.data = res.data
-          this.detailDialog.visible = true
-        } else {
-          this.$message.error(res.message || '获取详情失败')
-        }
-      } catch (error) {
-        console.error('获取详情失败:', error)
-        this.$message.error('网络错误，请稍后重试')
-        // 如果接口失败，直接使用列表数据显示详情
-        this.detailDialog.data = row
-        this.detailDialog.visible = true
-      }
+    // 查看详情 - 直接使用列表数据
+    handleViewDetail(row) {
+      this.detailDialog.data = row
+      this.detailDialog.visible = true
     }
   }
 }
