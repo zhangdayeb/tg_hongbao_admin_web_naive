@@ -457,7 +457,7 @@ export default {
         const res = await getAdvertisementListApi(params)
 
         if (res.code === 1) {
-          this.advertisementList = res.data.data || []
+          this.advertisementList = res.data.list || []
           this.totalCount = parseInt(res.data.total) || 0
           this.currentPage = parseInt(res.data.current_page) || 1
           this.pageSize = parseInt(res.data.per_page) || 20
