@@ -125,17 +125,6 @@
 
         <el-table-column prop="expire_time" label="过期时间" width="180" />
 
-        <el-table-column label="操作" width="80" align="center" fixed="right">
-          <template slot-scope="scope">
-            <el-button
-              type="text"
-              size="small"
-              @click="handleViewDetail(scope.row)"
-            >
-              详情
-            </el-button>
-          </template>
-        </el-table-column>
       </el-table>
 
       <!-- 分页 -->
