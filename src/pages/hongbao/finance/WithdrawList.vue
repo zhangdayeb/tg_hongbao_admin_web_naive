@@ -324,7 +324,12 @@
 </template>
 
 <script>
-import { getPayListApi, gettPayStatusApi, getWithdrawStatisticsApi } from '@/api/MoneylogApi'
+import {
+  getPayListApi,
+  gettPayPassApi,
+  gettPayRefuseApi,
+  getWithdrawStatisticsApi
+} from '@/api/MoneylogApi'
 
 export default {
   name: 'WithdrawList',
@@ -418,6 +423,7 @@ export default {
         if (this.searchParameter.dateRange && this.searchParameter.dateRange.length === 2) {
           params.start_date = this.searchParameter.dateRange[0];
           params.end_date = this.searchParameter.dateRange[1];
+          delete params.dateRange;
         }
 
         const res = await getPayListApi(params);
@@ -505,9 +511,8 @@ export default {
           type: 'warning'
         });
 
-        const res = await gettPayStatusApi({
+        const res = await gettPayPassApi({
           id: row.id,
-          status: 1,
           msg: '快速通过'
         });
 
@@ -519,7 +524,10 @@ export default {
           this.$message.error(res.message || '审核失败');
         }
       } catch (error) {
-        // 用户取消操作
+        // 用户取消操作或网络错误
+        if (error !== 'cancel') {
+          this.$message.error('网络错误');
+        }
       }
     },
 
@@ -529,12 +537,28 @@ export default {
         await this.$refs.auditForm.validate();
 
         this.auditDialog.loading = true;
-        const res = await gettPayStatusApi({
-          id: this.auditForm.id,
-          status: this.auditForm.audit_status,
-          msg: this.auditForm.msg,
-          transaction_hash: this.auditForm.transaction_hash
-        });
+
+        let res;
+        if (this.auditForm.audit_status === 1) {
+          // 通过审核
+          const params = {
+            id: this.auditForm.id,
+            msg: this.auditForm.msg
+          };
+
+          // 如果填写了交易哈希，则传递该参数
+          if (this.auditForm.transaction_hash) {
+            params.transaction_hash = this.auditForm.transaction_hash;
+          }
+
+          res = await gettPayPassApi(params);
+        } else {
+          // 拒绝审核
+          res = await gettPayRefuseApi({
+            id: this.auditForm.id,
+            msg: this.auditForm.msg
+          });
+        }
 
         if (res.code === 1) {
           this.$message.success('审核成功');

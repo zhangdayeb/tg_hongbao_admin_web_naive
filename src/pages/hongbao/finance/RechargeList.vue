@@ -311,7 +311,12 @@
 </template>
 
 <script>
-import { getRechargeListApi, auditRechargeApi, getRechargeStatisticsApi } from '@/api/MoneylogApi'
+import {
+  getRechargeListApi,
+  getRechargePassApi,
+  getRechargeRefuseApi,
+  getRechargeStatisticsApi
+} from '@/api/MoneylogApi'
 
 export default {
   name: 'RechargeList',
@@ -402,6 +407,7 @@ export default {
         if (this.searchParameter.dateRange && this.searchParameter.dateRange.length === 2) {
           params.start_date = this.searchParameter.dateRange[0];
           params.end_date = this.searchParameter.dateRange[1];
+          delete params.dateRange;
         }
 
         const res = await getRechargeListApi(params);
@@ -486,9 +492,8 @@ export default {
           type: 'warning'
         });
 
-        const res = await auditRechargeApi({
+        const res = await getRechargePassApi({
           id: row.id,
-          status: 1,
           admin_remarks: '快速通过'
         });
 
@@ -500,7 +505,10 @@ export default {
           this.$message.error(res.message || '审核失败');
         }
       } catch (error) {
-        // 用户取消操作
+        // 用户取消操作或网络错误
+        if (error !== 'cancel') {
+          this.$message.error('网络错误');
+        }
       }
     },
 
@@ -510,11 +518,21 @@ export default {
         await this.$refs.auditForm.validate();
 
         this.auditDialog.loading = true;
-        const res = await auditRechargeApi({
-          id: this.auditForm.id,
-          status: this.auditForm.audit_status,
-          admin_remarks: this.auditForm.admin_remarks
-        });
+
+        let res;
+        if (this.auditForm.audit_status === 1) {
+          // 通过审核
+          res = await getRechargePassApi({
+            id: this.auditForm.id,
+            admin_remarks: this.auditForm.admin_remarks
+          });
+        } else {
+          // 拒绝审核
+          res = await getRechargeRefuseApi({
+            id: this.auditForm.id,
+            admin_remarks: this.auditForm.admin_remarks
+          });
+        }
 
         if (res.code === 1) {
           this.$message.success('审核成功');
