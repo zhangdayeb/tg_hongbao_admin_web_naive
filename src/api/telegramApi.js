@@ -197,3 +197,46 @@ export function getAdvertisementStatisticsApi(data) {
     return res
   })
 }
+
+
+// ================== 机器人配置管理接口 ==================
+
+/**
+ * 获取机器人配置
+ * @returns {Promise}
+ */
+export function getBotConfigApi() {
+  return axios.post({
+    url: '/telegram/bot/config',
+    data: {},
+  }).then((res) => {
+    return res
+  })
+}
+
+/**
+ * 更新机器人配置
+ * @param {Object} data 配置信息
+ * @param {string} data.welcome 欢迎消息，必填
+ * @param {string} data.button1_name 按钮1名称，可选
+ * @param {string} data.button1_url 按钮1链接，可选
+ * @param {string} data.button2_name 按钮2名称，可选
+ * @param {string} data.button2_url 按钮2链接，可选
+ * @param {string} data.button3_name 按钮3名称，可选
+ * @param {string} data.button3_url 按钮3链接，可选
+ * @param {string} data.button4_name 按钮4名称，可选
+ * @param {string} data.button4_url 按钮4链接，可选
+ * @param {string} data.button5_name 按钮5名称，可选
+ * @param {string} data.button5_url 按钮5链接，可选
+ * @param {string} data.button6_name 按钮6名称，可选
+ * @param {string} data.button6_url 按钮6链接，可选
+ * @returns {Promise}
+ */
+export function updateBotConfigApi(data) {
+  return axios.post({
+    url: '/telegram/bot/config/update',
+    data: data,
+  }).then((res) => {
+    return res
+  })
+}
