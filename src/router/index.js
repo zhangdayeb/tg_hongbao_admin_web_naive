@@ -211,6 +211,13 @@ export const allowRouters = [
         meta: {
           title: '广告管理'
         }
+      },
+      {
+        path: 'config',
+        component: () => import('@/pages/hongbao/telegram/Config'),
+        meta: {
+          title: '配置管理'
+        }
       }
     ]
   },
