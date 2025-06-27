@@ -74,6 +74,23 @@
           </template>
         </el-table-column>
 
+        <!-- 新增发送目标列 -->
+        <el-table-column label="发送目标" width="120" align="center">
+          <template slot-scope="scope">
+            <div style="font-size: 12px;">
+              <div v-if="scope.row.is_crowd == 1">
+                <el-tag type="success" size="mini">群发</el-tag>
+              </div>
+              <div v-if="scope.row.is_all_member == 1" style="margin-top: 2px;">
+                <el-tag type="info" size="mini">私发</el-tag>
+              </div>
+              <div v-if="scope.row.is_crowd != 1 && scope.row.is_all_member != 1">
+                <el-tag type="warning" size="mini">未设置</el-tag>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
         <el-table-column label="发送时间/配置" width="180" show-overflow-tooltip>
           <template slot-scope="scope">
             <div v-if="scope.row.send_mode === 1">
@@ -213,6 +230,37 @@
           </el-radio-group>
         </el-form-item>
 
+        <!-- 新增发送目标配置 -->
+        <el-form-item label="发送目标" prop="send_target">
+          <div class="send-target-section">
+            <div class="target-switches">
+              <el-switch
+                v-model="editForm.is_crowd"
+                :active-value="1"
+                :inactive-value="0"
+                active-text="群组发送"
+                inactive-text=""
+                style="margin-right: 30px;"
+              />
+              <el-switch
+                v-model="editForm.is_all_member"
+                :active-value="1"
+                :inactive-value="0"
+                active-text="私信发送"
+                inactive-text=""
+              />
+            </div>
+            <div class="target-tip">
+              <p style="color: #999; font-size: 12px; margin-top: 10px;">
+                可以同时选择群组发送和私信发送，至少选择一种发送方式
+              </p>
+              <p v-if="!isValidSendTarget" style="color: #f56c6c; font-size: 12px; margin-top: 5px;">
+                请至少选择一种发送方式
+              </p>
+            </div>
+          </div>
+        </el-form-item>
+
         <!-- 一次性定时模式 -->
         <el-form-item
           label="发送时间"
@@ -330,6 +378,19 @@
             </div>
           </el-col>
           <el-col :span="12">
+            <div class="detail-item">
+              <label>发送目标：</label>
+              <div>
+                <el-tag v-if="detailDialog.data.is_crowd == 1" type="success" size="small" style="margin-right: 8px;">群组发送</el-tag>
+                <el-tag v-if="detailDialog.data.is_all_member == 1" type="info" size="small">私信发送</el-tag>
+                <span v-if="detailDialog.data.is_crowd != 1 && detailDialog.data.is_all_member != 1" style="color: #999;">未设置</span>
+              </div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
             <div class="detail-item" v-if="detailDialog.data.image_url">
               <label>广告图片：</label>
               <div class="detail-image-wrapper">
@@ -341,9 +402,6 @@
               </div>
             </div>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item" v-if="detailDialog.data.send_time">
               <label>发送时间：</label>
@@ -358,15 +416,15 @@
               <span>{{ detailDialog.data.interval_minutes }}分钟</span>
             </div>
           </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item">
               <label>生效期间：</label>
               <span>{{ detailDialog.data.start_date }} 至 {{ detailDialog.data.end_date || '永久' }}</span>
             </div>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="20">
           <el-col :span="12">
             <div class="detail-item">
               <label>发送统计：</label>
@@ -378,7 +436,10 @@
               </div>
             </div>
           </el-col>
-          <el-col :span="12">
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="24">
             <div class="detail-item">
               <label>时间信息：</label>
               <div class="time-info">
@@ -455,7 +516,9 @@ export default {
         interval_minutes: 30,       // 发送间隔分钟数（模式3使用）
         start_date: '',             // 开始生效日期
         end_date: '',               // 结束生效日期
-        status: 1                   // 状态：0=禁用, 1=启用
+        status: 1,                  // 状态：0=禁用, 1=启用
+        is_crowd: 1,                // 是否群发：0=否, 1=是
+        is_all_member: 1            // 是否全体私发：0=否, 1=是
       },
 
       // 每日时间列表（用于界面显示）
@@ -483,6 +546,9 @@ export default {
         interval_minutes: [
           { required: true, message: '请设置发送间隔', trigger: 'change' },
           { type: 'number', min: 1, max: 1440, message: '间隔时间范围：1-1440分钟', trigger: 'change' }
+        ],
+        send_target: [
+          { validator: this.validateSendTarget, trigger: 'change' }
         ]
       },
 
@@ -522,6 +588,11 @@ export default {
       return validTimes.length > 0
     },
 
+    // 检查发送目标设置是否有效
+    isValidSendTarget() {
+      return this.editForm.is_crowd === 1 || this.editForm.is_all_member === 1
+    },
+
     // 动态计算当前需要的验证规则
     currentRules() {
       const rules = { ...this.baseRules }
@@ -553,6 +624,15 @@ export default {
   },
 
   methods: {
+    // 发送目标验证器
+    validateSendTarget(rule, value, callback) {
+      if (!this.isValidSendTarget) {
+        callback(new Error('请至少选择一种发送方式'))
+      } else {
+        callback()
+      }
+    },
+
     // 加载数据
     async loadData() {
       this.loading = true
@@ -630,7 +710,9 @@ export default {
         interval_minutes: 30,
         start_date: '',
         end_date: '',
-        status: 1  // 默认启用
+        status: 1,          // 默认启用
+        is_crowd: 1,        // 默认开启群发
+        is_all_member: 1    // 默认开启私发
       }
       this.dailyTimesList = ['08:00']
       this.editDialog.visible = true
@@ -653,7 +735,9 @@ export default {
             interval_minutes: res.data.interval_minutes || 30,
             start_date: res.data.start_date,
             end_date: res.data.end_date,
-            status: res.data.status
+            status: res.data.status,
+            is_crowd: res.data.is_crowd,
+            is_all_member: res.data.is_all_member
           }
 
           // 处理每日时间列表
@@ -757,6 +841,12 @@ export default {
           return
         }
         this.updateDailyTimes()
+      }
+
+      // 发送目标验证
+      if (!this.isValidSendTarget) {
+        this.$message.error('请至少选择一种发送方式')
+        return
       }
 
       this.$refs.editForm.validate(async (valid) => {
@@ -1025,6 +1115,19 @@ export default {
 .upload-success {
   color: #67C23A !important;
   font-weight: bold;
+}
+
+/* 发送目标样式 */
+.send-target-section {
+  width: 100%;
+}
+
+.target-switches {
+  margin-bottom: 10px;
+}
+
+.target-tip {
+  margin-top: 10px;
 }
 
 .daily-times-section {
